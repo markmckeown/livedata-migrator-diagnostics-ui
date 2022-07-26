@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>LDM Diagnostics</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/css/diagnostics.css">
+<script src="/js/chart.min.js"></script>
+<script src="/js/common.js"></script>
+</head>
+
+<body>
+<!-- Navbar -->
+<div class="topnav">
+    <a id="index-link" href="/">Summary</a>
+    <a href="/throughput.html">Throughput</a>
+    <a href="/system.html">System</a>
+    <a href="/network.html">Network</a>
+    <a href="/migrations.html">Migrations</a>
+    <a href="/filetrackers.html">Transfers</a>
+</div>
+
+<div class="content">
+    <div>
+      <h1>System Diagnostics</h1>
+    </div>
+    <div class="charts-wrapper">
+      <div>
+        <canvas id="SystemCPUChart"></canvas>
+      </div>
+      <div>
+        <canvas id="SystemIOwaitChart"></canvas>
+      </div>
+      <div>
+        <canvas id="JvmGCChart"></canvas>
+      </div>
+      <div>
+        <canvas id="EventManagerDBChart"></canvas>
+      </div>
+    </div>
+
+       <div style="text-align:center">
+          <div class="tooltip">
+            <span class="tooltiptext">Move slider to report point in time Diagnostics.</span>
+            <h2 style="text-align:center"><span id="current-timestamp"></span></h2>
+         </div>
+       </div>
+    <div>
+       <table>
+         <tr>
+            <td style="text-align:right"><span id="startDate"></span></td>
+            <td style="width:50%"><input type="range" min=0 max="100" value="100" class="slider" id="myRange"></td>
+            <td style="text-align:left"><span id="endDate"></span></td>
+            <td style="text-align:right">Scale</td>
+            <td style="text-align:right">-</td>
+            <td style="width:10%"><input type="range" min=60 max="1440" value="240" class="slider" id="zoomSlider"></td>
+            <td style="text-align:left">+</td>
+         </tr>
+       </table>
+    </div>
+</div>
+<div class="footer">
+  <p></p>
+</div>
+
+
+<script>
+
+function setMinZero(value, index, array) {
+  if (value < 0.0) {
+    return 0.0;
+  } else {
+    return value;
+  }
+}
+
+
+var cpuChart;
+var dates;
+var processCpuLoad;
+var systemCpuLoad;
+var startIndex = 0;
+var zoomScale = 240;
+function doSystemCPUChart(systemCPU) {
+  dates = systemCPU.timeStamp.map(toDate);
+  processCpuLoad = systemCPU.processCpuLoad;
+  systemCpuLoad = systemCPU.systemCpuLoad;
+
+  let endIndex = startIndex + zoomScale;
+  if (endIndex >= dates.length) {
+    endIndex = dates.length;
+  }
+
+  cpuChart = new Chart("SystemCPUChart", {
+    type: "line",
+    data: {
+      labels: dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Process CPU Load",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 99, 132, 0.5),
+        borderColor: 'rgb(255, 99, 132)',
+        data: processCpuLoad.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      },
+      {
+        label: "System CPU Load",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
+        data: systemCpuLoad.slice(startIndex, endIndex),
+        yAxisID: 'y1',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "CPU Load"
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          max: 1.0,
+          position: 'left', 
+          title: {
+            display: true,
+            text: 'Process CPU Load'
+          }
+        },
+        y1: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          max: 1.0,
+          position: 'right', 
+          grid: {
+             drawOnChartArea: false, // only want the grid lines for one axis to show up
+          },
+          title: {
+            display: true,
+            text: 'System CPU Load'
+          }
+        }
+      }
+    }
+  });
+}
+
+var EventManagerDBChart;
+var eventManagerMeanDbTime;
+var eventManagerMaxDbTime;
+function doEventManagerDBChart(eventManagerDBJson) {
+  dates = eventManagerDBJson.timeStamp.map(toDate);
+  eventManagerMeanDbTime = eventManagerDBJson.eventManagerMeanDbTime;
+  eventManagerMaxDbTime = eventManagerDBJson.eventManagerMaxDbTime;
+
+  let endIndex = startIndex + zoomScale;
+  if (endIndex >= dates.length) {
+    endIndex = dates.length;
+  }
+
+  EventManagerDBChart = new Chart("EventManagerDBChart", {
+    type: "line",
+    data: {
+      labels: dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Event Manager Mean DB Write Time",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 99, 132, 0.5),
+        borderColor: 'rgb(255, 99, 132)',
+        data: eventManagerMeanDbTime.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      },
+      {
+        label: "Event Manager Max DB Write Time",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
+        data: eventManagerMaxDbTime.slice(startIndex, endIndex),
+        yAxisID: 'y1',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "Event Manager DB Write Time."
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          position: 'left', 
+          title: {
+            display: true,
+            text: 'Mean Write Time'
+          }
+        },
+        y1: {
+          display: true,
+          type: 'logarithmic',
+          min: 0.0,
+          position: 'right', 
+          grid: {
+             drawOnChartArea: false, // only want the grid lines for one axis to show up
+          },
+          title: {
+            display: true,
+            text: 'Max Write Time'
+          }
+        }
+      }
+    }
+  });
+}
+
+var ioWaitChart;
+var iowaitPercentage;
+function doSystemIOwaitChart(systemIOwait) {
+  dates = systemIOwait.timeStamp.map(toDate);
+  iowaitPercentage = systemIOwait.ioWaitPercentage.map(setMinZero);
+  
+  startIndex = 0;
+  let endIndex = startIndex + zoomScale;
+  if (endIndex >= dates.length) {
+    endIndex = dates.length;
+  }
+
+  ioWaitChart = new Chart("SystemIOwaitChart", {
+    type: "line",
+    data: {
+      labels: dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "IO Wait Percentage",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 99, 132, 0.5),
+        borderColor: 'rgb(255, 99, 132)',
+        data: iowaitPercentage.slice(startIndex, endIndex),
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "IO Wait Percentage"
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          title: {
+            display: true,
+            text: 'System IO Wait Percentage'
+          }
+        }
+      }
+    }
+  });
+}
+
+
+var gcChart;
+var gcTimeForPeriod;
+var gcAverageTime;
+function doJvmGCChart(jvmGC) {
+  dates = jvmGC.timeStamp.map(toDate);
+  gcTimeForPeriod = jvmGC.gcTimeForPeriod;
+  gcAverageTime = jvmGC.gcAverageTime;
+  let endIndex = startIndex + zoomScale;
+  if (endIndex >= dates.length) {
+    endIndex = dates.length;
+  }
+
+  gcChart = new Chart("JvmGCChart", {
+    type: "line",
+    data: {
+      labels: dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "JVM GC Average Time (ms)",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 99, 132, 0.5),
+        borderColor: 'rgb(255, 99, 132)',
+        data: gcAverageTime.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      },
+      {
+        label: "JVM GC Time (ms) for period.",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
+        data: gcTimeForPeriod.slice(startIndex, endIndex),
+        yAxisID: 'y1',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "JVM GC Time."
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          position: 'left', 
+          min: 0.0,
+          title: {
+            display: true,
+            text: 'Average JVM GC Time (ms)'
+          }
+        },
+        y1: {
+          display: true,
+          type: 'linear',
+          position: 'right', 
+          min: 0.0,
+          grid: {
+             drawOnChartArea: false, // only want the grid lines for one axis to show up
+          },
+          title: {
+            display: true,
+            text: 'JVM GC Time for Period'
+          }
+        }
+      }
+    }
+  });
+}
+
+async function getEventManagerWriteTimes() {
+  let url = '/api/event_manager/db_diagnostics';
+  try {
+    let res = await fetch(url);
+    let json =  await res.json();
+    if (pageIndex > 0 ) {
+       for (let i = 0; i < json.timeStamp.length; i++) {
+         if (json.timeStamp[i] === pageIndex) {
+            startIndex = i;
+            break; 
+         }
+       }	       	      
+    }
+    doEventManagerDBChart(json);
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+
+async function getSystemCPU() {
+  let url = '/api/systemCPU';
+  try {
+    let res = await fetch(url);
+    let json =  await res.json();
+    if (pageIndex > 0 ) {
+       for (let i = 0; i < json.timeStamp.length; i++) {
+         if (json.timeStamp[i] === pageIndex) {
+            startIndex = i;
+            break; 
+         }
+       }	       	      
+    }
+    doSystemCPUChart(json);
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+async function getSystemIOwait() {
+  let url = '/api/iowaitpercentage';
+  try {
+    let res = await fetch(url);
+    let json =  await res.json();
+    if (pageIndex > 0 ) {
+       for (let i = 0; i < json.timeStamp.length; i++) {
+         if (json.timeStamp[i] === pageIndex) {
+            startIndex = i;
+            break; 
+         }
+       }	       	      
+    }
+    doSystemIOwaitChart(json);
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+var timeStamps;
+async function getJvmGCTime() {
+  let url = '/api/jvmGC';
+  try {
+    let res = await fetch(url);
+    let json =  await res.json();
+    if (pageIndex > 0 ) {
+       for (let i = 0; i < json.timeStamp.length; i++) {
+         if (json.timeStamp[i] === pageIndex) {
+            startIndex = i;
+            break; 
+         }
+       }	       	      
+    }
+    timeStamps = json.timeStamp;
+    processSlider(json.timeStamp[0], json.timeStamp[json.timeStamp.length - 1], json.timeStamp.length, startIndex);
+    doJvmGCChart(json);
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+
+function processSlider(startDate, endDate, max, index) {
+   let newValue = index > 0 ? index : 0;
+   document.getElementById("myRange").max = max;
+   document.getElementById("myRange").value = newValue;
+   document.getElementById("startDate").innerHTML = new Date(startDate).toISOString();
+   document.getElementById("endDate").innerHTML = new Date(endDate).toISOString();
+   document.getElementById("current-timestamp").innerHTML = new Date(startDate).toISOString();
+}
+
+var slider = document.getElementById("myRange");
+slider.oninput = function() {
+  startIndex = parseInt(this.value);
+  redrawChart();
+  let offset = startIndex + Math.floor(zoomScale/2); 
+  if (offset > timeStamps.length - 1) {
+      if (startIndex < timeStamps.length - 1) {
+        offset = startIndex;
+      } else {
+        offset = timeStamps.length - 1;
+      }
+  }
+  document.getElementById("current-timestamp").innerHTML = new Date(timeStamps[offset]).toISOString();
+}
+
+var zoomSlider = document.getElementById("zoomSlider");
+zoomSlider.oninput = function() {
+  zoomScale = parseInt(this.value);
+  redrawChart();
+}
+
+function redrawChart() {
+  let endIndex = startIndex + zoomScale;
+  if (endIndex > dates.length) {
+    endIndex = dates.length;
+  }
+  cpuChart.data.labels = dates.slice(startIndex, endIndex);
+  cpuChart.data.datasets[0].data = processCpuLoad.slice(startIndex, endIndex);
+  cpuChart.data.datasets[1].data = systemCpuLoad.slice(startIndex, endIndex);  
+  cpuChart.update();
+
+  EventManagerDBChart.data.labels = dates.slice(startIndex, endIndex);
+  EventManagerDBChart.data.datasets[0].data = eventManagerMeanDbTime.slice(startIndex, endIndex);
+  EventManagerDBChart.data.datasets[1].data = eventManagerMaxDbTime.slice(startIndex, endIndex);  
+  EventManagerDBChart.update();
+
+  ioWaitChart.data.labels = dates.slice(startIndex, endIndex);
+  ioWaitChart.data.datasets[0].data = iowaitPercentage.slice(startIndex, endIndex);
+  ioWaitChart.update();
+
+  gcChart.data.labels = dates.slice(startIndex, endIndex);
+  gcChart.data.datasets[0].data = gcAverageTime.slice(startIndex, endIndex);  
+  gcChart.data.datasets[1].data = gcTimeForPeriod.slice(startIndex, endIndex);
+  gcChart.update();
+}
+
+
+document.getElementById("SystemCPUChart").onclick = function(evt) {
+  var activePoint = myLine.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    document.getElementById('index-link').href = "/?index=" + timeStamps[clickedElementindex + startIndex];
+  }
+};
+
+document.getElementById("SystemIOwaitChart").onclick = function(evt) {
+  var activePoint = ioWaitChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    document.getElementById('index-link').href = "/?index=" + timeStamps[clickedElementindex + startIndex];
+  }
+};
+
+document.getElementById("JvmGCChart").onclick = function(evt) {
+  var activePoint = gcChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    document.getElementById('index-link').href = "/?index=" + timeStamps[clickedElementindex + startIndex];
+  }
+};
+
+document.getElementById("EventManagerDBChart").onclick = function(evt) {
+  var activePoint = EventManagerDBChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    document.getElementById('index-link').href = "/?index=" + timeStamps[clickedElementindex + startIndex];
+  }
+};
+
+
+const urlParams = new URLSearchParams(window.location.search);
+var pageIndex = urlParams.get('index');
+if (!pageIndex) {
+   pageIndex = -1;      
+} else {
+   pageIndex = parseInt(pageIndex);
+}
+getSystemCPU(pageIndex);
+getEventManagerWriteTimes(pageIndex);
+getSystemIOwait(pageIndex);
+getJvmGCTime(pageIndex);
+</script>
+
+</body>
+</html>

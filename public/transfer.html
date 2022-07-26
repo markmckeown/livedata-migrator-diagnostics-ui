@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>LDM Diagnostics</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/css/diagnostics.css">
+<script src="/js/chart.min.js"></script>
+<script src="/js/sorttable.js"></script>
+<script src="/js/common.js"></script>
+</head>
+
+<body>
+<!-- Navbar -->
+<div class="topnav">
+    <a id="index-link" href="/">Summary</a>
+    <a href="/throughput.html">Throughput</a>
+    <a id="system-link" href="/system.html">System</a>
+    <a id="network-link" href="/network.html">Network</a>
+    <a id="migrations-link" href="/migrations.html">Migrations</a>
+    <a id="filetracker-link" href="/filetrackers.html">Transfers</a>
+</div>
+
+<div class="content">
+
+    <div id='chart-container'>
+      <p>	    
+        <canvas id="FileTransferChart"></canvas>
+      </p>	
+    </div>
+    <div id='chart-slider-container'>
+      <p>
+      <table>
+	      <tr>
+	      <td style="text-align:right"><span id='range-start'></span></td>
+	      <td style="width:60%"><input type="range" min=0 max="100" value="0" class="slider" id="myRange"></td>
+	      <td><span id='range-end'></span></td>
+	      </tr>
+      </table>
+      </p>
+    </div>	    
+    <div>
+      <p>	    
+       <table id="transfer-table"></table>
+      </p>  
+    </div>
+</div>
+
+<div class="footer">
+  <p></p>
+</div>
+
+<script>
+function reWriteLinks(index) {
+    document.getElementById('index-link').href = "/?index=" + index;
+    document.getElementById('system-link').href = "/system.html?index=" + index;
+    document.getElementById('migrations-link').href = "/migrations.html?index=" + index;
+    document.getElementById('network-link').href = "/network.html?index=" + index;
+    document.getElementById('filetracker-link').href = "/filetrackers.html?index=" + index;
+}
+
+async function getDiagnostic(index, path) {
+  let url = '/api/diagnostic?index=' + index;
+  try {
+    let res = await fetch(url);
+    let json =  await res.json(); 
+    let {fileTracker, diagnosticTimeStamp}  = processDiagnostic(json, path);
+    let migrationName = getMigrationName(fileTracker, json.diagnosticSet.diagnostics);	  
+    processTransferTable(fileTracker, diagnosticTimeStamp, migrationName);	  
+    processDiagnosticForFileTransfer(fileTracker, diagnosticTimeStamp);	  
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+
+function getMigrationName(fileTracker, diagnostics) {
+  let migrationId = fileTracker.MigrationId;
+  let migrationName;	
+  for (let i in diagnostics) {
+    if (diagnostics[i].type === 'ActionStoreDiagnosticDTO') {
+       if (diagnostics[i].id === migrationId) {
+         migrationName = diagnostics[i].migrationId;
+         break;
+       }
+    }	    
+  }
+  return migrationName;	
+}
+
+
+function processTransferTable(fileTracker, diagnosticTimeStamp, migrationName) {
+  let percentageDone = Math.floor((fileTracker.BytesTransferred * 100)/fileTracker.FileLength);
+  let endTime;
+  if (fileTracker.IsComplete) {
+     endTime = fileTracker.CompleteTime
+  } else {
+     endTime = diagnosticTimeStamp > fileTracker.lastUpdate ? diagnosticTimeStamp : fileTracker.LastUpdate;	  
+  }
+  let transferTime = endTime - fileTracker.StartTime;	
+  let lastUpdate = fileTracker.LastUpdate;
+  let transferType = fileTracker.StatsType;	
+  let migrationId = fileTracker.MigrationId;	
+
+  let text = "<table>";
+  text += "<tr><td>Path</td><td>" + fileTracker.Path + "</td></tr>";	
+  text += "<tr><td>Migration</td><td>" + migrationName + "</td></tr>"
+  text += "<tr><td>MigrationId</td><td>" + migrationId + "</td></tr>"
+  text += "<tr><td>Activity Type</td><td>" + transferType + "</td></tr>"; 	
+  text += "<tr><td>Transfer Complete</td><td>" + fileTracker.IsComplete + "</td></tr>";	
+  text += "<tr><td>Start Time</td><td>" + new Date(fileTracker.StartTime).toISOString() + "</td></tr>";
+  text += "<tr><td>Time of Last Write</td><td>" + new Date(lastUpdate).toISOString() + "</td></tr>";	
+  if (fileTracker.IsComplete) {
+    text += "<tr><td>Completed Time</td><td>" + new Date(fileTracker.CompleteTime).toISOString() + "</td></tr>";
+  } else {
+    text += "<tr><td>Completed Time</td><td>-</td></tr>";
+  }	
+  text += "<tr><td>Capture Time</td><td>" + new Date(diagnosticTimeStamp).toISOString() + "</td></tr>";
+  text += "<tr><td>Time Transferring</td><td>" + msToTime(transferTime)  + "</td></tr>"	
+  text += "<tr><td>File Size</td><td>" + humanFileSize(fileTracker.FileLength, true) + "</td></tr>";	
+  text += "<tr><td>Transferred Bytes</td><td>" + humanFileSize(fileTracker.BytesTransferred, true) + "</td></tr>";	
+  text += "<tr><td>Percentage Tramsferred</td><td>" + percentageDone + "%</td></tr>";	
+  text += "<tr><td>Average Transfer Rate</td><td>" + Math.floor(toMBSecond(fileTracker.BytesPerSecond)) + " Mbit/s</td></tr>";	
+  text += "<tr><td>Transfer Attempts</td><td>" + fileTracker.AttemptCount + "</td></tr>";	
+  let latencyAvailable = fileTracker.EventLatency ? true : false;
+  if (latencyAvailable) {
+     text += "<tr><td>Migration Latency</td><td>" + msToTime(fileTracker.EventLatency) + "</td></tr>";	
+  }
+  text += "</table>";	
+  document.getElementById("transfer-table").innerHTML = text;
+}
+
+
+function processDiagnostic(json, path){
+  let diagnostic;	
+  let diagnosticTimeStamp;	
+  for (let j in json.diagnosticSet.diagnostics) {
+    diagnostic = json.diagnosticSet.diagnostics[j];
+    if (diagnostic.type === 'FileTrackerDiagnosticDTO') {	    
+      diagnosticTimeStamp = diagnostic.timeStamp;	    
+      break;
+    }
+  }
+  
+  let fileTracker;
+  for (let i in diagnostic.fileTrackers) {
+      fileTracker = diagnostic.fileTrackers[i];
+      if ( fileTracker.Path === path) {
+        break;
+      }
+  }
+  return {fileTracker, diagnosticTimeStamp};
+}
+
+function processDiagnosticForFileTransfer(fileTracker, diagnosticTimeStamp) {
+  if (fileTracker.IsComplete) {
+    // Complete transfers cannot be plotted
+    document.getElementById("chart-slider-container").style.display = "none";	  
+    document.getElementById("chart-container").style.display = "none";	  
+    return;	  
+  }	  
+  let seconds = [];
+  let bytesForSecond = [];
+  let endTime;
+  if (fileTracker.Buckets.length === 0) {
+    endTime = diagnosticTimeStamp;
+    for (let i = fileTracker.StartTime; i < endTime; i = i + 1000) {
+       seconds.push(i);
+       bytesForSecond.push(0);
+    }
+    seconds.push(endTime);
+    bytesForSecond.push(fileTracker.BytesTransferred);
+    plotFileTransferGraph(fileTracker, seconds, bytesForSecond);
+    return;
+  }
+
+  let buckets = fileTracker.Buckets;
+  let startTime = Math.floor(fileTracker.StartTime / 1000);
+  let lastUpdate = Math.floor(fileTracker.LastUpdate / 1000);
+  let diagnosticTimeSeconds = Math.floor(diagnosticTimeStamp/ 1000);
+  endTime = lastUpdate > diagnosticTimeSeconds ? lastUpdate : diagnosticTimeSeconds;
+  let j = 0;
+  for (i = startTime; i <= endTime; i++) {
+    if (j < buckets.length &&  buckets[j].Second  == i) { 
+      bytesForSecond.push(buckets[j].BytesForSecond);
+      j++;
+    } else {
+      bytesForSecond.push(0);
+    }
+    seconds.push(i * 1000);
+  }
+  
+  plotFileTransferGraph(fileTracker, seconds, bytesForSecond);
+  return;
+}
+
+
+var slider = document.getElementById("myRange");
+slider.oninput = function() {
+  startIndex = parseInt(this.value);
+  redrawChart();
+}
+
+function redrawChart() {
+  let endIndex = startIndex + zoomScale;
+  if (endIndex > dates.length) {
+    endIndex = dates.length;
+  }
+  document.getElementById("range-start").innerHTML = dates[startIndex];
+  document.getElementById("range-end").innerHTML = dates[endIndex-1]; 
+  fileTransferChart.data.labels = dates.slice(startIndex, endIndex);
+  fileTransferChart.data.datasets[0].data = transferRate.slice(startIndex, endIndex);  
+  fileTransferChart.data.datasets[1].data = mibPerS.slice(startIndex, endIndex);  
+  fileTransferChart.update();
+}
+
+
+var fileTransferChart;
+var dates;
+var mibPerS;
+var transferRate;
+var startIndex = 0;
+var zoomScale = 300;
+function plotFileTransferGraph(fileTracker, seconds, bytesForSecond) {
+  dates = seconds.map(toDate);
+  mibPerS = bytesForSecond.map(toMBSecond);
+  transferRate = bytesForSecond;	
+  let percentageDone = Math.floor((fileTracker.BytesTransferred * 100)/fileTracker.FileLength);
+
+  if (dates.length <= 360) {
+    endIndex = dates.length;	  
+    // No Slider
+    document.getElementById("chart-slider-container").style.display = "none";	  
+  } else {
+    endIndex = startIndex + zoomScale; 
+    // Need to setup Slider Range 
+    document.getElementById("myRange").max = dates.length;
+    document.getElementById("range-start").innerHTML = dates[0];
+    document.getElementById("range-end").innerHTML = dates[endIndex-1]; 
+  }	  
+
+
+  fileTransferChart = new Chart("FileTransferChart", {
+   type: "line",
+    data: {
+      labels: dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Bytes Per Second",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 99, 132, 0.5),
+        borderColor: 'rgb(255, 99, 132)',
+        data: transferRate.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      },
+      {
+        label: "Mbit/s",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
+        data: mibPerS.slice(startIndex, endIndex),
+        yAxisID: 'y1',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: [[fileTracker.Path], '  (' + percentageDone + '% transferred, size: ' + humanFileSize(fileTracker.FileLength, true) +')'],
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0,
+          title: {
+            display: true,
+            text: 'Bytes Per Second'
+          }
+        },
+        y1: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          position: 'right', 
+          grid: {
+             drawOnChartArea: false, // only want the grid lines for one axis to show up
+          },
+          title: {
+            display: true,
+            text: 'Mbit/s'
+          }
+        }
+       }
+     }
+  });
+}
+
+
+const urlParams = new URLSearchParams(window.location.search);
+var pageIndex = urlParams.get('index');
+pageIndex = parseInt(pageIndex);
+var filePath = urlParams.get('path');
+reWriteLinks(pageIndex);
+getDiagnostic(pageIndex, filePath);
+
+</script>
+</body>
+</html>

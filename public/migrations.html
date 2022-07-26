@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>LDM Diagnostics</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href="/css/diagnostics.css">
+		<script src="/js/chart.min.js"></script>
+		<script src="/js/sorttable.js"></script>
+		<script src="/js/common.js"></script>
+	</head>
+
+	<body>
+<!-- Navbar -->
+	<div class="topnav">
+		<a href="/">Summary</a>
+		<a href="/throughput.html">Throughput</a>
+		<a href="/system.html">System</a>
+		<a href="/network.html">Network</a>
+		<a href="/migrations.html">Migrations</a>
+		<a href="/filetrackers.html">Transfers</a>
+	</div>
+
+	<div class="content">
+   		<div class="tooltip">
+    			<span class="tooltiptext">Click point in graph to report point in Migrations details.</span>
+    			<div>
+      				<h1>Migrations</h1>
+			</div>
+   		</div>
+   		<p>
+   			<div class="charts-wrapper">
+      				<div>
+					<canvas id="PendingRegionChart"></canvas>
+				</div>
+				<div>
+					<canvas id="ActionsChart"></canvas>
+				</div>
+				<div>
+        				<canvas id="EventsChart"></canvas>
+      				</div>
+      				<div>
+        				<canvas id="FailedPathChart"></canvas>
+      				</div>
+   			</div>
+		</p>
+		<p>
+       			<div style="text-align:center">
+          			<div class="tooltip">
+            				<span class="tooltiptext">Move slider to report point in time Diagnostics.</span>
+            				<h2 style="text-align:center"><span id="current-timestamp"></span></h2>
+         			</div>
+       			</div>
+    			<div>
+       				<table>
+         				<tr>
+            					<td style="text-align:right"><span id="startDate"></span></td>
+            					<td style="width:50%"><input type="range" min=0 max="100" value="100" class="slider" id="myRange"></td>
+            					<td style="text-align:left"><span id="endDate"></span></td>
+            					<td style="text-align:right">Scale</td>
+            					<td style="text-align:right">-</td>
+            					<td style="width:10%"><input type="range" min=60 max="1440" value="240" class="slider" id="zoomSlider"></td>
+            					<td style="text-align:left">+</td>
+         				</tr>
+       				</table>
+    			</div>
+    		</p>
+		<p>
+        		<div style="text-align:center;">
+        			<div class="tooltip">
+          				<span class="tooltiptext">Table can be sorted by clicking on table headers.</span>
+          			</div>
+            			<h2>Migrations at <span id="time-of-diagnostic"></span></h2>
+          		</div>
+      			<div>
+         			<table id="migration-state-table"></table>
+      			</div>
+      		</p>
+      		<p>
+      			<div>
+         			<table id="migration-table"></table>
+      			</div>
+      		</p>
+	</div>
+
+	<div class="footer">
+  		<p></p>
+	</div>
+
+<script>
+
+var failedPathsChart;
+var dates;
+var failedPaths;
+var retries;
+var startIndex = 0;
+var zoomScale = 240;
+function doFailedPathsChart(json) {
+   dates = json.timeStamp.map(toDate);
+   failedPaths = json.failedPaths;
+   retries = json.retries;
+
+   let endIndex = startIndex + zoomScale;
+   if (endIndex >= dates.length) {
+     endIndex = dates.length;
+   }
+
+   failedPathsChart = new Chart("FailedPathChart", {
+    type: "line",
+    data: {
+      labels: dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Failed Paths",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 99, 132, 0.5),
+        borderColor: 'rgb(255, 99, 132)',
+        data: failedPaths.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      },
+      {
+        label: "Retries",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
+        data: retries.slice(startIndex, endIndex),
+        yAxisID: 'y1',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "Total Failed Paths and Retries."
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          position: 'left', 
+          title: {
+            display: true,
+            text: 'Failed Paths'
+          }
+        },
+        y1: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          position: 'right', 
+          grid: {
+             drawOnChartArea: false, // only want the grid lines for one axis to show up
+          },
+          title: {
+            display: true,
+            text: 'Retries'
+          }
+        }
+      }
+    }
+   })
+}
+
+
+
+var pendingRegionChart;
+var pendingRegions;
+function doPendingRegionChart(queue) {
+  dates = queue.timeStamp.map(toDate);
+  pendingRegions = queue.pendingRegions;
+
+  let endIndex = startIndex + zoomScale;
+  if (endIndex >= dates.length) {
+    endIndex = dates.length;
+  }
+
+  pendingRegionChart = new Chart("PendingRegionChart", {
+    type: "line",
+    data: {
+      labels: dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Pending Regions",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 99, 132, 0.5),
+        borderColor: 'rgb(255, 99, 132)',
+        data: pendingRegions.slice(startIndex, endIndex)
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "Total Pending Regions Queue"
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          title: {
+            display: true,
+            text: 'Pending Regions'
+          }
+        }
+      }
+    }
+  });
+}
+
+var actionsChart;
+var actions;
+function doActionsChart(queue) {
+  dates = queue.timeStamp.map(toDate);
+  actions = queue.actions;
+
+  let endIndex = startIndex + zoomScale;
+  if (endIndex >= dates.length) {
+    endIndex = dates.length;
+  }
+  actionsChart = new Chart("ActionsChart", {
+    type: "line",
+    data: {
+      labels: dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Actions",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 99, 132, 0.5),
+        borderColor: 'rgb(255, 99, 132)',
+        data: actions.slice(startIndex, endIndex),
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "Total Actions Queue"
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          title: {
+            display: true,
+            text: 'Actions'
+          }
+        }
+      }
+    }
+  });
+}
+
+var eventsChart;
+var events;
+function doEventsChart(queue) {
+  dates = queue.timeStamp.map(toDate);
+  events = queue.events;
+
+  let endIndex = startIndex + zoomScale;
+  if (endIndex >= dates.length) {
+    endIndex = dates.length;
+  }
+
+  eventsChart = new Chart("EventsChart", {
+    type: "line",
+    data: {
+      labels: dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Events Queue",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor:  transparentize(255, 99, 132, 0.5),
+        borderColor: 'rgb(255, 99, 132)',
+        data: events.slice(startIndex, endIndex),
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "Total Events Queue"
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          title: {
+            display: true,
+            text: 'Events'
+          }
+        }
+      }
+    }
+  });
+}
+
+
+var timeStamps;
+async function getQueues(pageIndex) {
+  let url = '/api/queues';
+  try {
+    let res = await fetch(url);
+    let json =  await res.json();
+    timeStamps = json.timeStamp;
+    if (pageIndex > 0 ) {
+       for (let i = 0; i < timeStamps.length; i++) {
+         if (timeStamps[i] === pageIndex) {
+            startIndex = i;
+            break; 
+         }
+       }	       	      
+    }
+    doPendingRegionChart(json);
+    doActionsChart(json);
+    doEventsChart(json);
+    processSlider(json.timeStamp[0],json.timeStamp[json.timeStamp.length - 1], json.timeStamp.length, startIndex);
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+async function getFailedPaths(pageIndex) {
+  let url = '/api/migration_failures';
+  try {
+    let res = await fetch(url);
+    let json =  await res.json();
+    timeStamps = json.timeStamp;
+    if (pageIndex > 0 ) {
+       for (let i = 0; i < timeStamps.length; i++) {
+         if (timeStamps[i] === pageIndex) {
+            startIndex = i;
+            break; 
+         }
+       }	       	      
+    }
+    doFailedPathsChart(json);
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+document.getElementById("PendingRegionChart").onclick = function(evt) {
+  var activePoint = actionsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+
+  // make sure click was on an actual point
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    getDiagnostic(timeStamps[startIndex + clickedElementindex])
+  }
+};
+
+document.getElementById("ActionsChart").onclick = function(evt) {
+  var activePoint = actionsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+
+  // make sure click was on an actual point
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    getDiagnostic(timeStamps[startIndex + clickedElementindex]);
+  }
+};
+
+document.getElementById("EventsChart").onclick = function(evt) {
+  var activePoint = eventsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+
+  // make sure click was on an actual point
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    getDiagnostic(timeStamps[startIndex + clickedElementindex]);
+  }
+};
+
+
+document.getElementById("FailedPathChart").onclick = function(evt) {
+  var activePoint = failedPathsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+
+  // make sure click was on an actual point
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    getDiagnostic(timeStamps[startIndex + clickedElementindex]);
+  }
+};
+
+
+function buildMigrationTable(mapPendingRegions, mapEvents, mapActions, mapFailedPaths, mapRetries) {
+  let text = '<tr><th style="cursor: pointer;">Migration</th><th style="cursor: pointer;">Pending Regions</th><th style="cursor: pointer;">Actions</th>';
+  if (mapEvents) {
+     text += '<th style="cursor: pointer;">Queued Events</th>';
+  }
+  text += '<th style="cursor: pointer;">Failed Paths</th><th style="cursor: pointer;">Retries</th></tr>';  
+  for (const migration of mapPendingRegions.keys()) {
+    let actions = mapActions.has(migration) ? mapActions.get(migration) : 0;
+    text += "<tr><td>" + migration + 
+            "</td><td>" + mapPendingRegions.get(migration) +
+            "</td><td>" + actions;
+    if (mapEvents) {
+       text += "</td><td>" + mapEvents.get(migration);
+    }        
+    text += "</td><td>" + mapFailedPaths.get(migration) +
+            "</td><td>" + mapRetries.get(migration) +
+            "</td></tr>";
+  }
+  document.getElementById("migration-table").innerHTML = text;
+  var newTableObject = document.getElementById("migration-table");
+  sorttable.makeSortable(newTableObject);
+}
+
+function buildMigrationStateTable(diagnostic) { 
+   let text = '<tr>'
+   for (const [key, value] of Object.entries(diagnostic.migrationStateCounts)) {
+      text += '<td>' + key + '</td><td>' + value + '</td>'
+   }
+   text += '</tr>'
+  document.getElementById("migration-state-table").innerHTML = text;
+}
+
+function processDiagnostic(json) {
+  let mapPendingRegions = new Map();
+  let mapEvents = new Map();
+  let mapActions = new Map();
+  let mapFailedPaths = new Map();
+  let mapRetries = new Map();
+  for (let j in json.diagnosticSet.diagnostics) {
+     let diagnostic = json.diagnosticSet.diagnostics[j];
+     if (diagnostic.type === 'EventManagerDiagnosticDTO') {
+        if (diagnostic.hasOwnProperty('totalQueuedEventsPerMigration')) {
+           for(let [key, value] of Object.entries(diagnostic.totalQueuedEventsPerMigration)) {
+              mapEvents.set(key, value);
+           }       
+        } else {
+          mapEvents = null;
+        }
+     } 
+     if (diagnostic.type === 'MigrationDiagnosticDTO') {
+        for(let [key, value] of Object.entries(diagnostic.pendingRegions)) {
+           mapPendingRegions.set(key, value);
+        }
+        for(let [key, value] of Object.entries(diagnostic.failedPaths)) {
+           mapFailedPaths.set(key, value);
+        }
+        for(let [key, value] of Object.entries(diagnostic.pathRetryCount)) {
+           mapRetries.set(key, value);
+        }
+	buildMigrationStateTable(diagnostic);
+     } 
+     if (diagnostic.type === 'ActionStoreDiagnosticDTO') {
+       mapActions.set(diagnostic.migrationId, diagnostic.totalUnExecutedEvents);
+     }
+  }
+  buildMigrationTable(mapPendingRegions, mapEvents, mapActions, mapFailedPaths, mapRetries);
+  document.getElementById("time-of-diagnostic").innerHTML = 
+                   new Date(json.diagnosticSet.timeStamp).toISOString().slice(0,-5);
+  return;
+}
+
+
+function processSlider(startDate, endDate, max, index) {
+   let newValue = index > 0 ? index : 0;
+   document.getElementById("myRange").max = max;
+   document.getElementById("myRange").value = newValue;
+   document.getElementById("startDate").innerHTML = new Date(startDate).toISOString();
+   document.getElementById("endDate").innerHTML = new Date(endDate).toISOString();
+   document.getElementById("current-timestamp").innerHTML = new Date(startDate).toISOString();
+}
+
+var slider = document.getElementById("myRange");
+slider.oninput = function() {
+  startIndex = parseInt(this.value);
+  redrawChart();
+  let offset = startIndex + Math.floor(zoomScale/2); 
+  if (offset > timeStamps.length - 1) {
+      if (startIndex < timeStamps.length - 1) {
+        offset = startIndex;
+      } else {
+        offset = timeStamps.length - 1;
+      }
+  }
+  document.getElementById("current-timestamp").innerHTML = new Date(timeStamps[offset]).toISOString();
+}
+
+slider.onchange = function() {
+  startIndex = parseInt(this.value);
+  let offset = startIndex + Math.floor(zoomScale/2);
+  if (offset > timeStamps.length - 1) {
+      if (startIndex < timeStamps.length - 1) {
+        offset = startIndex;
+      } else {
+        offset = timeStamps.length - 1;
+      }
+  }
+  document.getElementById("current-timestamp").innerHTML = new Date(timeStamps[offset]).toISOString();
+  getDiagnostic(timeStamps[offset]);
+}
+
+var zoomSlider = document.getElementById("zoomSlider");
+zoomSlider.oninput = function() {
+  zoomScale = parseInt(this.value);
+  redrawChart();
+}
+
+function redrawChart() {
+  let endIndex = startIndex + zoomScale;
+  if (endIndex > dates.length) {
+    endIndex = dates.length;
+  }
+
+  eventsChart.data.labels = dates.slice(startIndex, endIndex);
+  eventsChart.data.datasets[0].data = events.slice(startIndex, endIndex);
+  eventsChart.update();
+
+  actionsChart.data.labels = dates.slice(startIndex, endIndex);
+  actionsChart.data.datasets[0].data = actions.slice(startIndex, endIndex);
+  actionsChart.update();
+
+  pendingRegionChart.data.labels = dates.slice(startIndex, endIndex);
+  pendingRegionChart.data.datasets[0].data = pendingRegions.slice(startIndex, endIndex);
+  pendingRegionChart.update();
+
+  failedPathsChart.data.labels = dates.slice(startIndex, endIndex);
+  failedPathsChart.data.datasets[0].data = failedPaths.slice(startIndex, endIndex);
+  failedPathsChart.data.datasets[1].data = retries.slice(startIndex, endIndex);  
+  failedPathsChart.update();
+}
+
+
+async function getDiagnostic(index) {
+  let url = '/api/diagnostic?index=' + index;
+  try {
+    let res = await fetch(url);
+    let json =  await res.json();
+    processDiagnostic(json);
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+var pageIndex = urlParams.get('index');
+if (!pageIndex) {
+   pageIndex = -1;
+} else {
+   pageIndex = parseInt(pageIndex);
+}
+getQueues(pageIndex);
+getFailedPaths(pageIndex);
+getDiagnostic(pageIndex);
+
+</script>
+</body>
+</html>
