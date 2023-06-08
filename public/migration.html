@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>LiveData Migration Diagnostics</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="css/nouislider.min.css">
+<link rel="stylesheet" href="css/diagnostics.css">
+<script src="js/chart.min.js"></script>
+<script src="js/sorttable.js"></script>
+<script src="js/common.js"></script>
+<script src="js/chartjs-plugin-annotation.min.js"></script>
+<script src="js/nouislider.min.js"></script>
+</head>
+
+<body>
+<!-- Navbar -->
+<div class="topnav">
+ <a id="index-link", href="index.html">Summary</a>
+ <a id="throughput-link", href="throughput.html">Throughput</a>
+ <a id="system-link" href="system.html">System</a>
+ <a id="network-link" href="network.html">Network</a>
+ <a id="migrations-link" href="migrations.html">Migrations</a>
+ <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
+</div>
+
+<div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
+           <div>
+              <h2 id="migration-title"></h2>
+           </div>
+           <div class="charts-wrapper">
+              <div>
+                 <canvas id="ActionsChart"></canvas>
+              </div>
+              <div>
+                 <canvas id="PendingRegionsChart"></canvas>
+              </div>
+              <div>
+                <canvas id="ActiveTransfersChart"></canvas>
+              </div>
+              <div>
+                 <canvas id="PathRetryChart"></canvas>
+              </div>
+              <div>
+                 <canvas id="PathsRequeuedChart"></canvas>
+              </div>
+              <div>
+                 <canvas id="FailedPathChart"></canvas>
+              </div>
+              <div>
+               <canvas id="BytesScannedChart"></canvas>
+              </div>
+              <div>
+                <canvas id="FilesScannedChart"></canvas>
+             </div>
+           </div>
+           <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
+           <div>
+               <h3 style="text-align: center;"><span id="transfer-count"></span></h3>
+           </div>
+           <div style="overflow-x:auto;">
+             <table id="fileTracker-table" style="width:98%; margin-left:auto; margin-right: auto;"></table>
+           </div>
+</div>
+
+<script>
+//Datasets
+var actions;
+var pendingRegions;
+var pathRetryCount;
+var pathsRequeued;
+var failedPaths;
+var bytesScanned;
+var filesScanned;
+var activeTransfers;
+var migrationId;
+var diagnostics;
+
+//Charts
+var activeTransfersChart;
+var actionChart;
+var pendingRegionsChart;
+var pathRetryChart;
+var pathsRequeueChart;
+var failedPathChart;
+var bytesScannedChart;
+var filesScannedChart;
+
+//Sliders
+var slider = document.getElementById('slider');
+
+function doActionChart(migration_time_series, startIndex, middleIndex, endIndex) {
+  actions = migration_time_series.migration.map(a => a.totalUnExecutedEvents);
+  actionChart = new Chart("ActionsChart", {
+    type: "line",
+    data: {
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Actions",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255, 165, 0)',
+        data: actions.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      }]
+    },
+    options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
+      responsive: true,
+      plugins: {
+        annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: diagnosticsTimeSeries.middle,
+              xMax: diagnosticsTimeSeries.middle,
+              backgroundColor:  transparentize(255, 68, 51, 0.5),
+              borderColor: 'rgb(255, 68, 51)',
+              borderWidth: 2,
+           }
+         }
+        },
+        title: {
+          display: true,
+          text: "Migration Actions"
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          position: 'left', 
+          title: {
+            display: true,
+            text: 'Actions'
+          }
+        },
+      }
+    }
+  });
+}
+
+function doPendingRegionsChart(migration_time_series, startIndex, middleIndex, endIndex) {
+  pendingRegions = migration_time_series.migration.map(a => a.pendingRegions);
+  pendingRegionsChart = new Chart("PendingRegionsChart", {
+    type: "line",
+    data: {
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Pending Regions",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255, 165, 0)',
+        data: pendingRegions.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      }]
+    },
+    options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
+      responsive: true,
+      plugins: {
+        annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: diagnosticsTimeSeries.middle,
+              xMax: diagnosticsTimeSeries.middle,
+              backgroundColor:  transparentize(255, 68, 51, 0.5),
+              borderColor: 'rgb(255, 68, 51)',
+              borderWidth: 2,
+           }
+         }
+        },
+        title: {
+          display: true,
+          text: "Pending Regions"
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          position: 'left', 
+          title: {
+            display: true,
+            text: 'PendingRegions'
+          }
+        },
+      }
+    }
+  });
+}
+
+
+function doPathRetryChart(migration_time_series, startIndex, middleIndex, endIndex) {
+  pathRetryCount = migration_time_series.migration.map(a => a.pathRetryCount);
+  pathRetryChart = new Chart("PathRetryChart", {
+    type: "line",
+    data: {
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Retries",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255, 165, 0)',
+        data: pathRetryCount.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      }]
+    },
+    options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
+      responsive: true,
+      plugins: {
+        annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: diagnosticsTimeSeries.middle,
+              xMax: diagnosticsTimeSeries.middle,
+              backgroundColor:  transparentize(255, 68, 51, 0.5),
+              borderColor: 'rgb(255, 68, 51)',
+              borderWidth: 2,
+           }
+         }
+        },
+        title: {
+          display: true,
+          text: "Migration Retries"
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0,
+          position: 'left', 
+          title: {
+            display: true,
+            text: 'Retries'
+          }
+        },
+      }
+    }
+  });
+}
+
+
+function doPathsRequeuedChart(migration_time_series, startIndex, middleIndex, endIndex) {
+    
+  pathsRequeued = migration_time_series.migration.map(a => a.migrationPathsRequeued);
+  pathsRequeueChart = new Chart("PathsRequeuedChart", {
+    type: "line",
+    data: {
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Paths Requeued",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255, 165, 0)',
+        data: pathsRequeued.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      }]
+    },
+    options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
+      responsive: true,
+      plugins: {
+        annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: diagnosticsTimeSeries.middle,
+              xMax: diagnosticsTimeSeries.middle,
+              backgroundColor:  transparentize(255, 68, 51, 0.5),
+              borderColor: 'rgb(255, 68, 51)',
+              borderWidth: 2,
+           }
+         }
+        },
+        title: {
+          display: true,
+          text: "Paths Requeued"
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          position: 'left', 
+          title: {
+            display: true,
+            text: 'Paths Requeued'
+          }
+        },
+      }
+    }
+  });
+}
+
+function doFailedPathChart(migration_time_series, startIndex, middleIndex, endIndex) {
+    
+  failedPaths = migration_time_series.migration.map(a => a.failedPaths);
+  failedPathChart = new Chart("FailedPathChart", {
+    type: "line",
+    data: {
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Failed Paths",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255, 165, 0)',
+        data: failedPaths.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      }]
+    },
+    options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
+      responsive: true,
+      plugins: {
+        annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: diagnosticsTimeSeries.middle,
+              xMax: diagnosticsTimeSeries.middle,
+              backgroundColor:  transparentize(255, 68, 51, 0.5),
+              borderColor: 'rgb(255, 68, 51)',
+              borderWidth: 2,
+           }
+         }
+        },
+        title: {
+          display: true,
+          text: "Migration Failed Paths"
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          position: 'left', 
+          title: {
+            display: true,
+            text: 'Failed Paths'
+          }
+        },
+      }
+    }
+  });
+}
+
+function doBytesScannedChart(migration_time_series, startIndex, middleIndex, endIndex) {
+    
+  bytesScanned = migration_time_series.migration.map(a => a.bytesScanned);
+  bytesScannedChart = new Chart("BytesScannedChart", {
+    type: "line",
+    data: {
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Bytes Transferred due to Root Scan",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255, 165, 0)',
+        data: bytesScanned.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      }]
+    },
+    options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
+      responsive: true,
+      plugins: {
+        annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: diagnosticsTimeSeries.middle,
+              xMax: diagnosticsTimeSeries.middle,
+              backgroundColor:  transparentize(255, 68, 51, 0.5),
+              borderColor: 'rgb(255, 68, 51)',
+              borderWidth: 2,
+           }
+         }
+        },
+        title: {
+          display: true,
+          text: "Bytes Transferred"
+        },
+       tooltip: {
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+
+            if (context.parsed.y !== null) {
+                label = humanFileSize(context.parsed.y);
+            }
+            return label;
+          }
+        }
+      }
+     },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          position: 'left', 
+          title: {
+            display: true,
+            text: 'Bytes Transferred'
+          }
+        },
+      }
+    }
+  });
+}
+
+
+function doFilesScannedChart(migration_time_series, startIndex, middleIndex, endIndex) {
+    
+  filesScanned = migration_time_series.migration.map(a => a.filesScanned);
+  filesScannedChart = new Chart("FilesScannedChart", {
+    type: "line",
+    data: {
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Files Scanned",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255, 165, 0)',
+        data: filesScanned.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      }]
+    },
+    options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
+      responsive: true,
+      plugins: {
+        annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: diagnosticsTimeSeries.middle,
+              xMax: diagnosticsTimeSeries.middle,
+              backgroundColor:  transparentize(255, 68, 51, 0.5),
+              borderColor: 'rgb(255, 68, 51)',
+              borderWidth: 2,
+           }
+         }
+        },
+        title: {
+          display: true,
+          text: "Files Transferred due to root Scan."
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          position: 'left', 
+          title: {
+            display: true,
+            text: 'Files Transferred'
+          }
+        },
+      }
+    }
+  });
+}
+
+
+function doActiveTransfersChart(migration_time_series, startIndex, middleIndex, endIndex) {
+    
+  activeTransfers = migration_time_series.migration.map(a => a.activeTransfers);
+  activeTransfersChart = new Chart("ActiveTransfersChart", {
+    type: "line",
+    data: {
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
+      datasets: [{
+        label: "Active Transfers.",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255, 165, 0)',
+        data: activeTransfers.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      }]
+    },
+    options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
+      responsive: true,
+      plugins: {
+        annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: diagnosticsTimeSeries.middle,
+              xMax: diagnosticsTimeSeries.middle,
+              backgroundColor:  transparentize(255, 68, 51, 0.5),
+              borderColor: 'rgb(255, 68, 51)',
+              borderWidth: 2,
+           }
+         }
+        },
+        title: {
+          display: true,
+          text: "Active Transfers for Migration."
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: false,
+            text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
+          }
+        },
+        y: {
+          display: true,
+          type: 'linear',
+          min: 0.0,
+          position: 'left', 
+          title: {
+            display: true,
+            text: 'Active Transfers'
+          }
+        },
+      }
+    }
+  });
+}
+
+function processMigrationTimeSeries(migration_time_series, migration_id) {
+   doActionChart(migration_time_series);
+   doPendingRegionsChart(migration_time_series);
+   doPathRetryChart(migration_time_series);
+   doPathsRequeuedChart(migration_time_series); 
+   doFailedPathChart(migration_time_series);  
+   doBytesScannedChart(migration_time_series);
+   doFilesScannedChart(migration_time_series);
+   doActiveTransfersChart(migration_time_series);
+}
+
+function chartOnClick(clickedElementindex) {
+    diagnosticsTimeSeries.middle =
+       diagnosticsTimeSeries.dates[
+         diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
+           + clickedElementindex];
+    slider.noUiSlider.setHandle(1, diagnosticsTimeSeries.middle, false, false); 
+    getDiagnostic(migrationId);
+    reWriteLinks();	  
+}
+
+
+document.getElementById("ActionsChart").onclick = function(evt) {
+  var activePoint = actionChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    chartOnClick(clickedElementindex)
+  }
+};
+
+document.getElementById("PendingRegionsChart").onclick = function(evt) {
+  var activePoint = pendingRegionsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    chartOnClick(clickedElementindex)
+  }
+};
+
+
+document.getElementById("PathRetryChart").onclick = function(evt) {
+  var activePoint = pathRetryChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    chartOnClick(clickedElementindex)
+  }
+};
+
+
+document.getElementById("PathsRequeuedChart").onclick = function(evt) {
+  var activePoint = pathsRequeuedChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    chartOnClick(clickedElementindex)
+  }
+};
+
+document.getElementById("FailedPathChart").onclick = function(evt) {
+  var activePoint = failedPathChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    chartOnClick(clickedElementindex)
+  }
+};
+
+
+document.getElementById("BytesScannedChart").onclick = function(evt) {
+  var activePoint = bytesScannedChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    chartOnClick(clickedElementindex)
+  }
+};
+
+
+document.getElementById("FilesScannedChart").onclick = function(evt) {
+  var activePoint = filesScannedChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    chartOnClick(clickedElementindex)
+  }
+};
+
+
+document.getElementById("ActiveTransfersChart").onclick = function(evt) {
+  var activePoint = activeTransfersChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    chartOnClick(clickedElementindex)
+  }
+};
+
+function redrawChart() {
+  let startIndex =  diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start);
+  let endIndex = diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.end);
+
+  const charts = [activeTransfersChart, actionChart, pendingRegionsChart, pathRetryChart, 
+                pathsRequeueChart, failedPathChart, bytesScannedChart, filesScannedChart];
+
+  charts.forEach((chart) => {
+    chart.data.labels = diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
+  });
+  
+  actionChart.data.datasets[0].data = actions.slice(startIndex, endIndex);
+
+  pendingRegionsChart.data.datasets[0].data = pendingRegions.slice(startIndex, endIndex);
+
+  pathRetryChart.data.datasets[0].data = pathRetryCount.slice(startIndex, endIndex);
+
+  pathsRequeueChart.data.datasets[0].data = pathsRequeued.slice(startIndex, endIndex);
+
+  failedPathChart.data.datasets[0].data = failedPaths.slice(startIndex, endIndex);
+
+  bytesScannedChart.data.datasets[0].data = bytesScanned.slice(startIndex, endIndex);
+
+  filesScannedChart.data.datasets[0].data = filesScanned.slice(startIndex, endIndex);
+  
+  activeTransfersChart.data.datasets[0].data = activeTransfers.slice(startIndex, endIndex);
+
+  charts.forEach((chart) => {
+    chart.options.plugins.annotation.annotations.line1.xMin = diagnosticsTimeSeries.middle;
+    chart.options.plugins.annotation.annotations.line1.xMax = diagnosticsTimeSeries.middle;
+    chart.update();
+  });
+}
+
+
+
+
+function processFileTrackerTable(diagnostic, index, migration) {
+  let count = 0;
+  document.getElementById("fileTracker-table").innerHTML = "";
+  
+  if (diagnostic.fileTrackers.length == 0 ) {
+     return;
+  }	
+
+
+  let latencyAvailable = diagnostic.fileTrackers[0].EventLatency ? true : false;
+  let timeStamp = diagnostic.timeStamp;
+  let text = ""
+  for (let i in diagnostic.fileTrackers) {
+    let fileTracker = diagnostic.fileTrackers[i];
+    if (fileTracker.MigrationId !== migration) {
+      continue;
+    }
+
+    if (count == 0) {
+       // There are entries - so write table header
+       text += "<tr><th style=\"cursor: pointer;\">Path</th><th style=\"cursor: pointer;\">Start Time</th><th style=\"cursor: pointer;\">Time (ms)</th><th style=\"cursor: pointer;\">File Size</th>"
+       if (latencyAvailable) {
+          text += "<th style=\"cursor: pointer;\">Latency (s)</th>"
+       }
+       text +=  "<th style=\"cursor: pointer;\">Transferred</th><th style=\"cursor: pointer;\">Attempt</th><th style=\"cursor: pointer;\">Complete</th><th style=\"cursor: pointer;\">Bytes/s</th></tr>";  
+    }
+    count = count + 1
+
+    let time = 0;
+    if (fileTracker.IsComplete) {
+      time = fileTracker.CompleteTime - fileTracker.StartTime; 
+      // Cannot display graph for complete tracker
+    } else {
+      let endTime = timeStamp > fileTracker.LastUpdate ? timeStamp : fileTracker.LastUpdate;
+      time = endTime - fileTracker.StartTime;
+    }
+    text += "<tr onclick=\"location.href=\'" + getFileLink(fileTracker.Path) + "\';\"  style=\"cursor: pointer;\">"
+    text += "<td>" + fileTracker.Path + "</td><td>" + new Date(fileTracker.StartTime).toISOString().slice(0,-8)  + "</td>"
+    text += "<td title=\"" + msToTime(time)  + "\">" + time.toLocaleString("en-US")  + "</td>"
+    text += "<td title=\"" + humanFileSize(fileTracker.FileLength) + "\">" + fileTracker.FileLength.toLocaleString("en-US")  +"</td>"
+    if (latencyAvailable) {
+       text += "<td title=\"" + secondsToTime(fileTracker.EventLatency)  + "\">" + fileTracker.EventLatency.toLocaleString("en-US")  + "</td>"
+    }
+    text += "<td title=\"" + humanFileSize(fileTracker.BytesTransferred) + "\">"+ fileTracker.BytesTransferred.toLocaleString("en-US")  +"</td>"
+    text += "<td>" + fileTracker.AttemptCount + "</td><td>" + fileTracker.IsComplete  + "</td>"
+    text += "<td title=\"" + toMBSecond(fileTracker.BytesPerSecond) + " Mbs\">" + fileTracker.BytesPerSecond.toLocaleString("en-US") + "</td></tr>";
+  }
+
+  if (count > 0 ) { 
+     document.getElementById("fileTracker-table").innerHTML = text;
+     var newTableObject = document.getElementById("fileTracker-table");
+     sorttable.makeSortable(newTableObject);
+  }
+
+  document.getElementById("transfer-count").innerHTML = count + " Active File Transfers at " 
+        + new Date(diagnostic.timeStamp).toISOString().slice(0,-5);
+}
+
+function processDiagnostic(json, index, migration) {
+  for (let j in json.diagnosticSet.diagnostics) {
+    let diagnostic = json.diagnosticSet.diagnostics[j];
+    if (diagnostic.type === 'FileTrackerDiagnosticDTO') {
+      processFileTrackerTable(diagnostic, index, migration);
+      break;
+    }
+  }
+}
+
+function onSliderUpdate() {
+   redrawChart();
+}
+
+function onSliderChange() {
+   getDiagnostic(migrationId);
+   reWriteLinks();	  
+}
+
+
+async function getMigrationTimeSeries(migration_id) {
+    try {
+       let res = await fetch('data/migrations/' + migration_id + '.gz')
+       let json = await res.json();
+       generateDiagnosticTimeSeries(json.timeStamp);
+       processMigrationTimeSeries(json)
+       renderSlider(slider, onSliderUpdate, onSliderChange);
+       migrationId = json.migration[0].id;
+       getDiagnostic(migrationId);
+       reWriteLinks();
+       return json;
+    } catch (error) {
+       console.log(error)
+    }
+}
+
+var old_index = -1;
+async function getDiagnostic(migration) {
+  try {
+    index = diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]];
+    if (old_index === index) {
+      return;
+    }
+    old_index = index;
+    let json = await loadDiagnostic(index);
+    diagnostics = json;
+    processDiagnostic(json, index, migration);
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+
+const urlParams = new URLSearchParams(window.location.search);
+const migration_name = urlParams.get('migration');
+getMigrationTimeSeries(migration_name)
+document.getElementById("migration-title").innerHTML = "Migration: " + migration_name;
+
+</script>
+</body>
+</html>

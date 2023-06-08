@@ -1,96 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>LDM Diagnostics</title>
+<title>LiveData Migrator Throughput Diagnostics</title>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/css/diagnostics.css">
-<script src="/js/chart.min.js"></script>
-<script src="/js/common.js"></script>
+<link rel="stylesheet" href="css/nouislider.min.css">
+<link rel="stylesheet" href="css/diagnostics.css">
+<script src="js/chart.min.js"></script>
+<script src="js/chartjs-plugin-annotation.min.js"></script>
+<script src="js/common.js"></script>
+<script src="js/nouislider.min.js"></script>
 </head>
 
 <body>
 <!-- Navbar -->
 <div class="topnav">
-    <a href="/">Summary</a>
-    <a href="/throughput.html">Throughput</a>
-    <a href="/system.html">System</a>
-    <a href="/network.html">Network</a>
-    <a href="/migrations.html">Migrations</a>
-    <a href="/filetrackers.html">Transfers</a>
+    <a id="index-link", href="index.html">Summary</a>
+    <a id="throughput-link", href="throughput.html"  style="background-color: #FED8B1;">Throughput</a>
+    <a id="system-link" href="system.html">System</a>
+    <a id="network-link" href="network.html">Network</a>
+    <a id="migrations-link" href="migrations.html">Migrations</a>
+    <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
 </div>
 
-<div class="content">
-    <div>
-      <h1>Throughput Diagnostics</h1>
-    </div>
-    <div>
-      <h2>Network Throughput</h2>
-    </div>
-    <div>
-      <canvas id="ThroughPutChart"></canvas>
-    </div>
-    <div>
-      <h2>File Throughput</h2>
-    </div>
-    <div>
-      <canvas id="FileThroughPutChart"></canvas>
-    </div>
-       <div style="text-align:center">
-          <div class="tooltip">
-            <span class="tooltiptext">Move slider to report point in time Diagnostics.</span>
-            <h2 style="text-align:center"><span id="current-timestamp"></span></h2>
-         </div>
-       </div>
-    <div>
-       <table>
-         <tr>
-            <td style="text-align:right"><span id="startDate"></span></td>
-            <td style="width:50%"><input type="range" min=0 max="100" value="100" class="slider" id="myRange"></td>
-            <td style="text-align:left"><span id="endDate"></span></td>
-            <td style="text-align:right">Scale</td>
-            <td style="text-align:right">-</td>
-            <td style="width:10%"><input type="range" min=60 max="1440" value="240" class="slider" id="zoomSlider"></td>
-            <td style="text-align:left">+</td>
-         </tr>
-       </table>
-    </div>
-</div>
-
-<div class="footer">
-  <p></p>
+<!-- !PAGE CONTENT! -->
+<div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
+   <div class="throughput-charts-wrapper">
+      <div>
+        <div>
+           <canvas id="ThroughPutChart" height="400"></canvas>
+        </div>
+      </div>
+      <div>
+        <div>
+           <canvas id="TotalFileSizeChart" height="400"></canvas>
+        </div>
+     </div>
+     <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
+   </div>
+<!-- !PAGE CONTENT! -->
 </div>
 
 <script>
-
-var throughputChart;
-var dates;
 var byterate;
 var filerate;
-var timeStamps;
-var startIndex = 0;
-var zoomScale = 240;
-function doThroughPutChart(throughput) {
-  timeStamps = throughput.timeStamp;
-  dates = throughput.timeStamp.map(toDate);
+var totalFileSize;
+var activeTransferCount;
+var totalFileSizeChart;
+var byterate;
+var filerate;
+
+// Sliders
+var slider = document.getElementById('slider');
+
+
+// Charts
+var throughPutChart;
+var totalFileSizeChart;
+
+
+function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
   byterate = throughput.bytesPerSecond.map(toMBSecond);
   filerate = throughput.filesPerSecond;
 
-  let endIndex = startIndex + zoomScale;
-  if (endIndex >= dates.length) {
-    endIndex = dates.length;
-  }
-
-  throughputChart = new Chart("ThroughPutChart", {
+   throughPutChart = new Chart("ThroughPutChart", {
     type: "line",
     data: {
-      labels: dates.slice(startIndex, endIndex),
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
       datasets: [{
         label: "Mbit/s",
         fill: false,
         lineTension: 0.4,
-        backgroundColor: transparentize(255, 99, 132, 0.5),
-        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
         data: byterate.slice(startIndex, endIndex),
         yAxisID: 'y'
       },
@@ -106,10 +88,31 @@ function doThroughPutChart(throughput) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
       plugins: {
-        title: {
-          display: true,
-          text: "Throughput Mbit/s"
+       annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: diagnosticsTimeSeries.middle,
+              xMax: diagnosticsTimeSeries.middle,
+              backgroundColor:  transparentize(255, 68, 51, 0.5),
+              borderColor: 'rgb(255, 68, 51)',
+              borderWidth: 2,
+           }
+        }
+      },
+      title: {
+          display: false,
+          fullSize: true, 
+          font: {
+               size: 24
+          },
+          text: "Throughput",
+          color: 'rgb(139, 64, 0)',
         }
       },
       scales: {
@@ -118,6 +121,13 @@ function doThroughPutChart(throughput) {
           title: {
             display: false,
             text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 20,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
           }
         },
         y: {
@@ -133,8 +143,8 @@ function doThroughPutChart(throughput) {
         y1: {
           display: true,
           type: 'linear',
-          min: 0.0,
           position: 'right', 
+          min: 0.0,
           grid: {
              drawOnChartArea: false, // only want the grid lines for one axis to show up
           },
@@ -149,46 +159,72 @@ function doThroughPutChart(throughput) {
 }
 
 
-var fileThroughPutChart;
-var per60Seconds;
-function doFileThroughPutChart(throughput) {
-  dates = throughput.timeStamp.map(toDate);
-  per60Seconds = throughput.filesForPeriod;
+function doTotalFileSizeChart(throughput, startIndex, middleIndex, endIndex) {
+  totalFileSize = throughput.totalFileSizeBeingTransferred;
+  activeTransferCount = throughput.filetrackerCount;
 
-  let endIndex = startIndex + zoomScale;
-  if (endIndex >= dates.length) {
-    endIndex = dates.length;
-  }
-
-  fileThroughPutChart = new Chart("FileThroughPutChart", {
+  
+  totalFileSizeChart = new Chart("TotalFileSizeChart", {
     type: "line",
     data: {
-      labels: dates.slice(startIndex, endIndex),
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
       datasets: [{
-        label: "Files for Period",
+        label: "Total File Size being transferred",
         fill: false,
         lineTension: 0.4,
-        backgroundColor:  transparentize(255, 99, 132, 0.5),
-        borderColor: 'rgb(255, 99, 132)',
-        data: per60Seconds.slice(startIndex, endIndex),
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
+        data: totalFileSize.slice(startIndex, endIndex),
         yAxisID: 'y',
       },
       {
-        label: "Files Per Second",
+        label: "Active File Transfers",
         fill: false,
         lineTension: 0.4,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
-        data: filerate.slice(startIndex, endIndex),
+        data: activeTransferCount.slice(startIndex, endIndex),
         yAxisID: 'y1',
       }]
     },
     options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
+       annotation: {
+          annotations: {
+            line1: {
+             type: 'line',
+             xMin: diagnosticsTimeSeries.middle,
+             xMax: diagnosticsTimeSeries.middle,
+             backgroundColor:  transparentize(255, 68, 51, 0.5),
+             borderColor: 'rgb(255, 68, 51)',
+             borderWidth: 2,
+           }
+        }
+      },
         title: {
           display: true,
-          text: "Files Migrated Throughput"
+          text: "Total File Size being Transferred."
+        },
+        tooltip: {
+           callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+
+              if (context.parsed.y !== null) {
+                if (label === "Total File Size being transferred") {
+                  label = label + ' ' + humanFileSize(context.parsed.y);
+                } else {
+                  label = label + ' ' + context.parsed.y;
+                }
+              }
+              return label;
+            },
+          }
         }
       },
       scales: {
@@ -197,6 +233,13 @@ function doFileThroughPutChart(throughput) {
           title: {
             display: false,
             text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 20,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
           }
         },
         y: {
@@ -206,7 +249,7 @@ function doFileThroughPutChart(throughput) {
           position: 'left', 
           title: {
             display: true,
-            text: 'Files for Period'
+            text: 'Total File Size for Period'
           }
         },
         y1: {
@@ -219,7 +262,7 @@ function doFileThroughPutChart(throughput) {
           },
           title: {
             display: true,
-            text: 'Files per Second'
+            text: 'Number of Files being Transferred."'
           }
         }
       }
@@ -227,71 +270,109 @@ function doFileThroughPutChart(throughput) {
   });
 }
 
-async function getThroughput() {
-  let url = '/api/throughput';
+
+
+
+function redrawChart() {
+  if (typeof throughPutChart === 'undefined') {
+    console.log("Skipping redrawing charts - throughPutChart not drawn yet");
+    return;
+  }
+  if (typeof totalFileSizeChart  === 'undefined') {
+    console.log("Skipping redrawing charts - totalFileSizeChart not drawn yet");
+    return;
+  }
+  let startIndex =  diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start);
+  let endIndex = diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.end);
+
+
+  throughPutChart.data.labels = 
+            diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
+  throughPutChart.data.datasets[0].data = byterate.slice(startIndex, endIndex);
+  throughPutChart.data.datasets[1].data = filerate.slice(startIndex, endIndex);
+  throughPutChart.options.plugins.annotation.annotations.line1.xMin = 
+           diagnosticsTimeSeries.middle;
+  throughPutChart.options.plugins.annotation.annotations.line1.xMax = 
+           diagnosticsTimeSeries.middle;
+  throughPutChart.update();
+
+  totalFileSizeChart.data.labels = diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
+  totalFileSizeChart.data.datasets[0].data = totalFileSize.slice(startIndex, endIndex);
+  totalFileSizeChart.data.datasets[1].data = activeTransferCount.slice(startIndex, endIndex);
+  totalFileSizeChart.options.plugins.annotation.annotations.line1.xMin = diagnosticsTimeSeries.middle,
+  totalFileSizeChart.options.plugins.annotation.annotations.line1.xMax = diagnosticsTimeSeries.middle,
+  totalFileSizeChart.update();
+}
+
+
+function onChartClick(clickedElementindex) {
+    diagnosticsTimeSeries.middle =
+        diagnosticsTimeSeries.dates[
+           diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
+              + clickedElementindex]    
+    redrawChart();
+    setSliderMiddle();
+    reWriteLinks();  
+}
+
+document.getElementById("ThroughPutChart").onclick = function(evt) {
+  var activePoint = throughPutChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+
+  // make sure click was on an actual point
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    onChartClick(clickedElementindex);
+  }
+};
+
+
+document.getElementById("TotalFileSizeChart").onclick = function(evt) {
+  var activePoint = totalFileSizeChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+
+  // make sure click was on an actual point
+  if (activePoint.length > 0) {
+    var clickedElementindex = activePoint[0].index;
+    onChartClick(clickedElementindex);
+  }
+};
+
+function setSliderMiddle() {
+   slider.noUiSlider.setHandle(1, diagnosticsTimeSeries.middle, false, false);
+}
+
+
+function onSliderUpdate() {
+}
+
+function onSliderChange() {
+   console.log("onSliderChange");
+   redrawChart();
+   reWriteLinks();
+}
+
+
+async function getThroughput(index) {
   try {
-    let res = await fetch(url);
-    let json =  await res.json();
-    processSlider(json.timeStamp[0], json.timeStamp[json.timeStamp.length - 1], json.timeStamp.length);
-    doThroughPutChart(json);
-    doFileThroughPutChart(json);
+    let json = await loadReport('throughput.gz');
+    generateDiagnosticTimeSeries(json.timeStamp);
+    renderSlider(slider, onSliderUpdate, onSliderChange);
+    doThroughPutChart(json, 
+             diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start],
+             diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle],
+             diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]);
+    doTotalFileSizeChart(json,
+             diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start],
+             diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle],
+             diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]);
+    reWriteLinks();  
     return;
   } catch (error) {
     console.log(error);
   }
 }
 
-
-var slider = document.getElementById("myRange");
-var startDate = document.getElementById("startDate");
-var endDate = document.getElementById("endDate");
-function processSlider(startDate, endDate, max) {
-   document.getElementById("myRange").value = 0;
-   document.getElementById("myRange").max = max;
-   document.getElementById("startDate").innerHTML = new Date(startDate).toISOString();
-   document.getElementById("endDate").innerHTML = new Date(endDate).toISOString();
-   document.getElementById("current-timestamp").innerHTML = new Date(startDate).toISOString();
-}
-
-slider.oninput = function() {
-  startIndex = parseInt(this.value);
-  redrawChart();
-  let offset = startIndex + Math.floor(zoomScale/2); 
-  if (offset > timeStamps.length - 1) {
-      if (startIndex < timeStamps.length - 1) {
-        offset = startIndex;
-      } else {
-        offset = timeStamps.length - 1;
-      }
-  }
-  document.getElementById("current-timestamp").innerHTML = new Date(timeStamps[offset]).toISOString();
-}
-
-var zoomSlider = document.getElementById("zoomSlider");
-zoomSlider.oninput = function() {
-  zoomScale = parseInt(this.value);
-  redrawChart();
-}
-
-function redrawChart() {
-  let endIndex = startIndex + zoomScale;
-  if (endIndex > dates.length) {
-    endIndex = dates.length;
-  }
-  throughputChart.data.labels = dates.slice(startIndex, endIndex);
-  throughputChart.data.datasets[0].data = byterate.slice(startIndex, endIndex);
-  throughputChart.data.datasets[1].data = filerate.slice(startIndex, endIndex);  
-  throughputChart.update();
-
-  fileThroughPutChart.data.labels = dates.slice(startIndex, endIndex);
-  fileThroughPutChart.data.datasets[0].data = per60Seconds.slice(startIndex, endIndex);
-  fileThroughPutChart.data.datasets[1].data = filerate.slice(startIndex, endIndex);
-  fileThroughPutChart.update();
-}
-
-
-
 getThroughput();
+reWriteLinks();  
 
 </script>
 </body>

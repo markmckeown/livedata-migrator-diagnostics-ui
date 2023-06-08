@@ -1,3 +1,2 @@
-samples
-node_modules
-workspace
+python.workspace
+*.swp

@@ -4,102 +4,79 @@
 <title>LDM Diagnostics</title>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/css/diagnostics.css">
-<script src="/js/chart.min.js"></script>
-<script src="/js/sorttable.js"></script>
-<script src="/js/common.js"></script>
+<link rel="stylesheet" href="css/nouislider.min.css">
+<link rel="stylesheet" href="css/diagnostics.css">
+<script src="js/chart.min.js"></script>
+<script src="js/chartjs-plugin-annotation.min.js"></script>
+<script src="js/sorttable.js"></script>
+<script src="js/common.js"></script>
+<script src="js/nouislider.min.js"></script>
 </head>
 
 <body>
 <!-- Navbar -->
 <div class="topnav">
-    <a id="index-link" href="/">Summary</a>
-    <a href="/throughput.html">Throughput</a>
-    <a id="system-link" href="/system.html">System</a>
-    <a href="/network.html">Network</a>
-    <a id="migrations-link" href="/migrations.html">Migrations</a>
-    <a id="filetracker-link" href="/filetrackers.html">Transfers</a>
+    <a id="index-link", href="index.html">Summary</a>
+    <a id="throughput-link", href="throughput.html">Throughput</a>
+    <a id="system-link" href="system.html">System</a>
+    <a id="network-link" href="network.html" style="background-color: #FED8B1;">Network</a>
+    <a id="migrations-link" href="migrations.html">Migrations</a>
+    <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
 </div>
 
-<div class="content">
-   <div class="tooltip">
-    <span class="tooltiptext">Click point in graph to report point in time connection details.</span>
-    <div>
-       <h1>Network Diagnostics</h1>
-    </div>
-   </div>
+<!-- !PAGE CONTENT! -->
+<div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
     <div class="charts-wrapper">
        <div>
-         <canvas id="ConnectionCountChart"></canvas>
+         <canvas id="ConnectionCountChart" height="400"></canvas>
        </div>
-      <div>
-         <canvas id="ConnectionRxBufferChart"></canvas>
-      </div>
-      <div>
-       <canvas id="ConnectionRetransmitChart" ></canvas>
-      </div>
-      <div>
-        <canvas id="ConnectionTxBufferChart"></canvas>
-      </div>
+       <div>
+         <canvas id="ConnectionRxBufferChart" height="400"></canvas>
+       </div>
+       <div>
+         <canvas id="ConnectionRetransmitChart" height="400"></canvas>
+       </div>
+       <div>
+         <canvas id="ConnectionTxBufferChart" height="400"></canvas>
+       </div>
     </div>
+    <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
     <div style="text-align:center">
-          <div class="tooltip">
-            <span class="tooltiptext">Move slider to report point in time Diagnostics.</span>
-            <h2 style="text-align:center"><span id="current-timestamp"></span></h2>
-         </div>
-    </div>
-    <div>
-       <table>
-         <tr>
-            <td style="text-align:right"><span id="startDate"></span></td>
-            <td style="width:50%"><input type="range" min=0 max="100" value="100" class="slider" id="myRange"></td>
-            <td style="text-align:left"><span id="endDate"></span></td>
-            <td style="text-align:right">Scale</td>
-            <td style="text-align:right">-</td>
-            <td style="width:10%"><input type="range" min=60 max="1440" value="240" class="slider" id="zoomSlider"></td>
-            <td style="text-align:left">+</td>
-         </tr>
-       </table>
-    </div>
-    <p>
-    <div style="text-align:center">
-       <h2><span id="connection-count"></span> Established Connections at <span id="connection-table-time"></span></h2>
+       <h4><span id="connection-count">0</span> Established Connections at <span id="connection-table-time"></span> (<span id="connection-count-with-tx">0</span> with Tx, <span id="connection-count-with-rx">0</span> with Rx)</h4>
     </div>
     <div>
        <table id="connection-table"></table>
     </div>
-    </p>
 </div>
-
-<div class="footer">
-  <p></p>
-</div>
-
 
 <script>
-
-var connectionTxBufferChart;
-var dates;
+//Datasets
 var tx;
+var rx;
+var count;
+var retrnsmt;
 var bytesPerSecond;
-var startIndex = 0;
-var zoomScale = 240;
-function doConnectionTxBufferChart(networkStatus) {
-  let endIndex = startIndex + zoomScale;
-  if (endIndex >= dates.length) {
-    endIndex = dates.length;
-  }
 
+//Charts
+var connectionTxBufferChart;
+var connectionRxBufferChart;
+var connectionCountChart;
+var connectionRetransmitChart;
+
+//Slider
+var slider = document.getElementById('slider');
+
+function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIndex) {
   connectionTxBufferChart = new Chart("ConnectionTxBufferChart", {
     type: "line",
     data: {
-      labels: dates.slice(startIndex, endIndex),
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
       datasets: [{
         label: "OS Tx Buffer Size",
         fill: false,
         lineTension: 0.4,
-        backgroundColor: transparentize(255, 99, 132, 0.5),
-        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
         data: tx.slice(startIndex, endIndex),
         yAxisID: 'y'
       },
@@ -115,8 +92,24 @@ function doConnectionTxBufferChart(networkStatus) {
       }]
     },
     options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
+         annotation: {
+          annotations: {
+            line1: {
+             type: 'line',
+             xMin: diagnosticsTimeSeries.middle,
+             xMax: diagnosticsTimeSeries.middle,
+             backgroundColor:  transparentize(255, 68, 51, 0.5),
+             borderColor: 'rgb(255, 68, 51)',
+             borderWidth: 2,
+           }
+          }
+        },
         title: {
           display: true,
           text: "OS Total Connection Tx Buffer Sizes"
@@ -128,6 +121,13 @@ function doConnectionTxBufferChart(networkStatus) {
           title: {
             display: false,
             text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
           }
         },
         y: {
@@ -157,25 +157,18 @@ function doConnectionTxBufferChart(networkStatus) {
   });
 }
 
-var connectionRxBufferChart;
-var rx;
-function doConnectionRxBufferChart(networkStatus) {
-  let endIndex = startIndex + zoomScale;
-  if (endIndex >= dates.length) {
-    endIndex = dates.length;
-  }
-  
+function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIndex) {
 
   connectionRxBufferChart = new Chart("ConnectionRxBufferChart", {
     type: "line",
     data: {
-      labels: dates.slice(startIndex, endIndex),
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
       datasets: [{
         label: "OS Rx Buffer Size",
         fill: false,
         lineTension: 0.4,
-        backgroundColor: transparentize(255, 99, 132, 0.5),
-        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
         data: rx.slice(startIndex, endIndex),
       },
       {
@@ -190,8 +183,24 @@ function doConnectionRxBufferChart(networkStatus) {
       }]
     },
     options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
+         annotation: {
+          annotations: {
+            line1: {
+             type: 'line',
+             xMin: diagnosticsTimeSeries.middle,
+             xMax: diagnosticsTimeSeries.middle,
+             backgroundColor:  transparentize(255, 68, 51, 0.5),
+             borderColor: 'rgb(255, 68, 51)',
+             borderWidth: 2,
+           }
+          }
+        },
         title: {
           display: true,
           text: "OS Total Connection Rx Buffer Sizes"
@@ -203,6 +212,13 @@ function doConnectionRxBufferChart(networkStatus) {
           title: {
             display: false,
             text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
           }
         },
         y: {
@@ -232,24 +248,17 @@ function doConnectionRxBufferChart(networkStatus) {
   });
 }
 
-var connectionCountChart;
-var count;
-function doConnectionCountChart(networkStatus) {
-  let endIndex = startIndex + zoomScale;
-  if (endIndex >= dates.length) {
-    endIndex = dates.length;
-  }
-
+function doConnectionCountChart(networkStatus, startIndex, middleIndex, endIndex) {
   connectionCountChart = new Chart("ConnectionCountChart", {
     type: "line",
     data: {
-      labels: dates.slice(startIndex, endIndex),
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
       datasets: [{
         label: "Connection Count",
         fill: false,
         lineTension: 0.4,
-        backgroundColor:  transparentize(255, 99, 132, 0.5),
-        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
         data: count.slice(startIndex, endIndex),
       },
       {
@@ -264,8 +273,24 @@ function doConnectionCountChart(networkStatus) {
       }]
     },
     options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
+         annotation: {
+          annotations: {
+            line1: {
+             type: 'line',
+             xMin: diagnosticsTimeSeries.middle,
+             xMax: diagnosticsTimeSeries.middle,
+             backgroundColor:  transparentize(255, 68, 51, 0.5),
+             borderColor: 'rgb(255, 68, 51)',
+             borderWidth: 2,
+           }
+          }
+        },
         title: {
           display: true,
           text: "Connection Count"
@@ -277,6 +302,13 @@ function doConnectionCountChart(networkStatus) {
           title: {
             display: false,
             text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
           }
         },
         y: {
@@ -306,24 +338,18 @@ function doConnectionCountChart(networkStatus) {
   });
 }
 
-var connectionRetransmitChart;
-var retrnsmt;
-function doConnectionRetransmitChart(networkStatus) {
-  let endIndex = startIndex + zoomScale;
-  if (endIndex >= dates.length) {
-    endIndex = dates.length;
-  }
+function doConnectionRetransmitChart(networkStatus, startIndex, middleIndex, endIndex) {
 
   connectionRetransmitChart = new Chart("ConnectionRetransmitChart", {
     type: "line",
     data: {
-      labels: dates.slice(startIndex, endIndex),
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
       datasets: [{
         label: "Retransmit Count",
         fill: false,
         lineTension: 0.4,
-        backgroundColor:  transparentize(255, 99, 132, 0.5),
-        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
         data: retrnsmt.slice(startIndex, endIndex),
       },
       {
@@ -338,8 +364,24 @@ function doConnectionRetransmitChart(networkStatus) {
       }]
     },
     options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
+         annotation: {
+          annotations: {
+            line1: {
+             type: 'line',
+             xMin: diagnosticsTimeSeries.middle,
+             xMax: diagnosticsTimeSeries.middle,
+             backgroundColor:  transparentize(255, 68, 51, 0.5),
+             borderColor: 'rgb(255, 68, 51)',
+             borderWidth: 2,
+           }
+          }
+        },
         title: {
           display: true,
           text: "Retransmit Count"
@@ -351,6 +393,13 @@ function doConnectionRetransmitChart(networkStatus) {
           title: {
             display: false,
             text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 15,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
           }
         },
         y: {
@@ -382,15 +431,33 @@ function doConnectionRetransmitChart(networkStatus) {
 
 
 function processConnectionTable(diagnostic) {
-  let text = "<tr><th style=\"cursor: pointer;\">Local Address</th><th style=\"cursor: pointer;\">Local Port</th><th style=\"cursor: pointer;\">Remote Address</th><th style=\"cursor: pointer;\">Remote Port</th><th style=\"cursor: pointer;\">Tx Buffer</th><th style=\"cursor: pointer;\">Rx Buffer</th><th style=\"cursor: pointer;\">Retransmit</th></tr>";  
+  let text = "<tr><th style=\"cursor: pointer;\">Local Address</th><th style=\"cursor: pointer;\">Local Port</th><th style=\"cursor: pointer;\">Remote Address</th><th style=\"cursor: pointer;\">Remote Port</th><th style=\"cursor: pointer;\">Tx Buffer</th><th style=\"cursor: pointer;\">Rx Buffer</th><th style=\"cursor: pointer;\">Retransmit</th></tr>";
+  let txCnt = 0;
+  let rxCnt = 0;
   for (let i in diagnostic.connections) {
     let connection = diagnostic.connections[i]
-    text += "<tr><td>" + connection.localAddressIP + "</td><td>" + connection.localAddressPort  +" </td><td>" + connection.remAddressIP  + "</td><td>"+ connection.remAddressPort  +"</td><td>" + connection.txQueue + "</td><td>" + connection.rxQueue + "</td><td>" + connection.retrnsmt + "</td></tr>";
+    text += "<tr><td>" + connection.localAddressIP + 
+            "</td><td>" + connection.localAddressPort  + 
+            "</td><td>" + connection.remAddressIP  + 
+            "</td><td>"+ connection.remAddressPort  + 
+            "</td><td title=\"" + humanFileSize(connection.txQueue, true) + "\">" + connection.txQueue.toLocaleString("en-US") + 
+            "</td><td title=\"" + humanFileSize(connection.rxQueue, true)  + "\">" + connection.rxQueue.toLocaleString("en-US") + 
+            "</td><td>" + connection.retrnsmt + "</td></tr>";
+    if(! (connection.txQueue.toString() === '0')) {
+      txCnt += 1;
+    }
+    if(! (connection.rxQueue.toString() === '0')) {
+      rxCnt += 1;
+    }
   }
   document.getElementById("connection-table").innerHTML = text;
   var newTableObject = document.getElementById("connection-table");
   sorttable.makeSortable(newTableObject);
-  return diagnostic.connections.length;
+  return {
+    count: diagnostic.connections.length,
+    hasRxData: rxCnt,
+    hasTxData: txCnt
+  }
 } 
 
 
@@ -403,51 +470,24 @@ function processDiagnostic(json) {
   }
 }
 
-
-var timeStamps;
-async function getNetworkStatus() {
-  let url = '/api/network';
-  try {
-    let res = await fetch(url);
-    let json =  await res.json();
-    timeStamps = json.timeStamp;
-    dates = json.timeStamp.map(toDate);
-    tx = json.totalTxQueue;
-    rx = json.totalRxQueue;
-    count = json.connectionCount;
-    bytesPerSecond = json.bytesPerSecond.map(toMBSecond); 		      
-    retrnsmt = json.retrnsmt;
-    if (pageIndex > 0 ) {
-       for (let i = 0; i < timeStamps.length; i++) {
-         if (timeStamps[i] === pageIndex) {
-            startIndex = i;
-            break; 
-         }
-       }	       	      
-    }
-    doConnectionTxBufferChart(json);
-    doConnectionRxBufferChart(json);
-    doConnectionCountChart(json);
-    doConnectionRetransmitChart(json);
-    processSlider(json.timeStamp[0], json.timeStamp[json.timeStamp.length - 1], json.timeStamp.length, startIndex);
-    return;
-  } catch (error) {
-    console.log(error);
-  }
+function onSliderUpdate() {
 }
 
-async function getDiagnostic(index) {
-  let url = '/api/diagnostic?index=' + index;
-  try {
-    let res = await fetch(url);
-    let json =  await res.json();
-    connectionCount = processDiagnostic(json);
-    document.getElementById("connection-table-time").innerHTML = new Date(json.diagnosticSet.timeStamp).toISOString().slice(0,-5);
-    document.getElementById("connection-count").innerHTML = connectionCount;
-    return;
-  } catch (error) {
-    console.log(error);
-  }
+function onSliderChange() {
+   getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
+   redrawChart(); 
+   reWriteLinks();
+}
+
+function onChartClick(clickedElementindex) {
+   diagnosticsTimeSeries.middle =
+       diagnosticsTimeSeries.dates[
+         diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
+           + clickedElementindex];
+   getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
+   resetAnnotations();
+   slider.noUiSlider.setHandle(1, diagnosticsTimeSeries.middle, false, false);
+   reWriteLinks();
 }
 
 
@@ -457,8 +497,7 @@ document.getElementById("ConnectionCountChart").onclick = function(evt) {
   // make sure click was on an actual point
   if (activePoint.length > 0) {
     var clickedElementindex = activePoint[0].index;
-    getDiagnostic(timeStamps[startIndex + clickedElementindex]);
-    reWriteLinks(timeStamps[startIndex + clickedElementindex]);	  
+    onChartClick(clickedElementindex);
   }
 };
 
@@ -468,8 +507,7 @@ document.getElementById("ConnectionTxBufferChart").onclick = function(evt) {
   // make sure click was on an actual point
   if (activePoint.length > 0) {
     var clickedElementindex = activePoint[0].index;
-    getDiagnostic(timeStamps[startIndex + clickedElementindex]);
-    reWriteLinks(timeStamps[startIndex + clickedElementindex]);	  
+    onChartClick(clickedElementindex);
   }
 };
 
@@ -479,8 +517,7 @@ document.getElementById("ConnectionRxBufferChart").onclick = function(evt) {
   // make sure click was on an actual point
   if (activePoint.length > 0) {
     var clickedElementindex = activePoint[0].index;
-    getDiagnostic(timeStamps[startIndex + clickedElementindex]);
-    reWriteLinks(timeStamps[startIndex + clickedElementindex]);	  
+    onChartClick(clickedElementindex);
   }
 };
 
@@ -490,100 +527,144 @@ document.getElementById("ConnectionRetransmitChart").onclick = function(evt) {
   // make sure click was on an actual point
   if (activePoint.length > 0) {
     var clickedElementindex = activePoint[0].index;
-    getDiagnostic(timeStamps[startIndex + clickedElementindex]);
-    reWriteLinks(timeStamps[startIndex + clickedElementindex]);	  
+    onChartClick(clickedElementindex);
   }
 };
 
-function reWriteLinks(index) {
-    document.getElementById('index-link').href = "/?index=" + index;
-    document.getElementById('system-link').href = "/system.html?index=" + index;
-    document.getElementById('migrations-link').href = "/migrations.html?index=" + index;
-    document.getElementById('filetracker-link').href = "/filetrackers.html?index=" + index;
-}
 
-
-function processSlider(startDate, endDate, max, index) {
-   let newValue = index > 0 ? index : 0;
-   document.getElementById("myRange").max = max;
-   document.getElementById("myRange").value = newValue;
-   document.getElementById("startDate").innerHTML = new Date(startDate).toISOString();
-   document.getElementById("endDate").innerHTML = new Date(endDate).toISOString();
-   document.getElementById("current-timestamp").innerHTML = new Date(startDate).toISOString();
-}
-
-var slider = document.getElementById("myRange");
-slider.oninput = function() {
-  startIndex = parseInt(this.value);
-  redrawChart();
-  let offset = startIndex + Math.floor(zoomScale/2); 
-  if (offset > timeStamps.length - 1) {
-      if (startIndex < timeStamps.length - 1) {
-        offset = startIndex;
-      } else {
-        offset = timeStamps.length - 1;
-      }
-  }
-  document.getElementById("current-timestamp").innerHTML = new Date(timeStamps[offset]).toISOString();
-}
-
-slider.onchange = function() {
-  startIndex = parseInt(this.value);
-  let offset = startIndex + Math.floor(zoomScale/2); 
-  if (offset > timeStamps.length - 1) {
-      if (startIndex < timeStamps.length - 1) {
-        offset = startIndex;
-      } else {
-        offset = timeStamps.length - 1;
-      }
-  }
-  document.getElementById("current-timestamp").innerHTML = new Date(timeStamps[offset]).toISOString();
-  getDiagnostic(timeStamps[offset]);
-}
-
-var zoomSlider = document.getElementById("zoomSlider");
-zoomSlider.oninput = function() {
-  zoomScale = parseInt(this.value);
-  redrawChart();
-}
-
-function redrawChart() {
-  let endIndex = startIndex + zoomScale;
-  if (endIndex > dates.length) {
-    endIndex = dates.length;
-  }
-
-  connectionTxBufferChart.data.labels = dates.slice(startIndex, endIndex);
-  connectionTxBufferChart.data.datasets[0].data = tx.slice(startIndex, endIndex);
-  connectionTxBufferChart.data.datasets[1].data = bytesPerSecond.slice(startIndex, endIndex);
+function resetAnnotations() {
+  connectionTxBufferChart.options.plugins.annotation.annotations.line1.xMin =
+           diagnosticsTimeSeries.middle;
+  connectionTxBufferChart.options.plugins.annotation.annotations.line1.xMax =
+           diagnosticsTimeSeries.middle;
   connectionTxBufferChart.update();
 
-  connectionRxBufferChart.data.labels = dates.slice(startIndex, endIndex);
-  connectionRxBufferChart.data.datasets[0].data = rx.slice(startIndex, endIndex);
-  connectionRxBufferChart.data.datasets[1].data = bytesPerSecond.slice(startIndex, endIndex);
+  connectionRxBufferChart.options.plugins.annotation.annotations.line1.xMin =
+           diagnosticsTimeSeries.middle;
+  connectionRxBufferChart.options.plugins.annotation.annotations.line1.xMax =
+           diagnosticsTimeSeries.middle;
   connectionRxBufferChart.update();
 
-  connectionCountChart.data.labels = dates.slice(startIndex, endIndex);
-  connectionCountChart.data.datasets[0].data = count.slice(startIndex, endIndex);
-  connectionCountChart.data.datasets[1].data = bytesPerSecond.slice(startIndex, endIndex);
+  connectionCountChart.options.plugins.annotation.annotations.line1.xMin =
+           diagnosticsTimeSeries.middle;
+  connectionCountChart.options.plugins.annotation.annotations.line1.xMax =
+           diagnosticsTimeSeries.middle;
   connectionCountChart.update();
 
-  connectionRetransmitChart.data.labels = dates.slice(startIndex, endIndex);
-  connectionRetransmitChart.data.datasets[0].data = retrnsmt.slice(startIndex, endIndex);
-  connectionRetransmitChart.data.datasets[1].data = bytesPerSecond.slice(startIndex, endIndex);
+
+  connectionRetransmitChart.options.plugins.annotation.annotations.line1.xMin =
+           diagnosticsTimeSeries.middle;
+  connectionRetransmitChart.options.plugins.annotation.annotations.line1.xMax =
+           diagnosticsTimeSeries.middle;
   connectionRetransmitChart.update();
 }
 
 
-const urlParams = new URLSearchParams(window.location.search);
-var pageIndex = urlParams.get('index');
-if (!pageIndex) {
-   pageIndex = -1;      
-} else {
-   pageIndex = parseInt(pageIndex);
+var oldStartIndex = -1;
+var oldEndIndex = -1;
+function redrawChart() {
+  let startIndex =  diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start);
+  let endIndex = diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.end);
+
+  if (oldStartIndex === startIndex && oldEndIndex === endIndex) {
+     resetAnnotations();
+     return;
+  }
+  oldStartIndex = startIndex;
+  oldEndIndex = endIndex;
+
+  connectionTxBufferChart.data.labels = diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
+  connectionTxBufferChart.data.datasets[0].data = tx.slice(startIndex, endIndex);
+  connectionTxBufferChart.data.datasets[1].data = bytesPerSecond.slice(startIndex, endIndex);
+  connectionTxBufferChart.options.plugins.annotation.annotations.line1.xMin =
+           diagnosticsTimeSeries.middle;
+  connectionTxBufferChart.options.plugins.annotation.annotations.line1.xMax =
+           diagnosticsTimeSeries.middle;
+  connectionTxBufferChart.update();
+
+  connectionRxBufferChart.data.labels = diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
+  connectionRxBufferChart.data.datasets[0].data = rx.slice(startIndex, endIndex);
+  connectionRxBufferChart.data.datasets[1].data = bytesPerSecond.slice(startIndex, endIndex);
+  connectionRxBufferChart.options.plugins.annotation.annotations.line1.xMin =
+           diagnosticsTimeSeries.middle;
+  connectionRxBufferChart.options.plugins.annotation.annotations.line1.xMax =
+           diagnosticsTimeSeries.middle;
+  connectionRxBufferChart.update();
+
+  connectionCountChart.data.labels = diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
+  connectionCountChart.data.datasets[0].data = count.slice(startIndex, endIndex);
+  connectionCountChart.data.datasets[1].data = bytesPerSecond.slice(startIndex, endIndex);
+  connectionCountChart.options.plugins.annotation.annotations.line1.xMin =
+           diagnosticsTimeSeries.middle;
+  connectionCountChart.options.plugins.annotation.annotations.line1.xMax =
+           diagnosticsTimeSeries.middle;
+  connectionCountChart.update();
+
+  connectionRetransmitChart.data.labels = diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
+  connectionRetransmitChart.data.datasets[0].data = retrnsmt.slice(startIndex, endIndex);
+  connectionRetransmitChart.data.datasets[1].data = bytesPerSecond.slice(startIndex, endIndex);
+  connectionRetransmitChart.options.plugins.annotation.annotations.line1.xMin =
+           diagnosticsTimeSeries.middle;
+  connectionRetransmitChart.options.plugins.annotation.annotations.line1.xMax =
+           diagnosticsTimeSeries.middle;
+  connectionRetransmitChart.update();
 }
-getNetworkStatus(pageIndex);
-getDiagnostic(pageIndex);
+
+var previousIndex = -1;
+async function getDiagnostic(index) {
+  try {
+    if (previousIndex === index) {
+       return;
+    }
+    previousIndex = index;
+    let json = await loadDiagnostic(index);
+    connectionStats = processDiagnostic(json);
+    document.getElementById("connection-table-time").innerHTML = new Date(json.diagnosticSet.timeStamp).toISOString().slice(0,-5);
+    document.getElementById("connection-count").innerHTML = connectionStats.count;
+    document.getElementById("connection-count-with-rx").innerHTML = connectionStats.hasRxData;
+    document.getElementById("connection-count-with-tx").innerHTML = connectionStats.hasTxData;
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+async function getNetworkStatus() {
+  try {
+    let json = await loadReport('network.gz');
+    generateDiagnosticTimeSeries(json.timeStamp);
+    getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
+    tx = json.totalTxQueue;
+    rx = json.totalRxQueue;
+    count = json.connectionCount;
+    bytesPerSecond = json.bytesPerSecond.map(toMBSecond); 		      
+    retrnsmt = json.retrnsmt;
+    doConnectionTxBufferChart(json,
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start],
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle],
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]);
+    doConnectionRxBufferChart(json,
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start],
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle],
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]);
+    doConnectionCountChart(json,
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start],
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle],
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]);
+    doConnectionRetransmitChart(json,
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start],
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle],
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]);
+    renderSlider(slider, onSliderUpdate, onSliderChange); 
+    reWriteLinks();
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+
+getNetworkStatus();
 
 </script>
 

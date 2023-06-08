@@ -11,14 +11,15 @@ body {
 /* Style the top navigation bar */
 .topnav {
   overflow: hidden;
-  background-color: #333;
+  background-color: #FFA500;
+  color:  black;
 }
 
 /* Style the topnav links */
 .topnav a {
   float: left;
   display: block;
-  color: #f2f2f2;
+  color: black;
   text-align: center;
   padding: 14px 16px;
   text-decoration: none;
@@ -26,7 +27,7 @@ body {
 
 /* Change color on hover */
 .topnav a:hover {
-  background-color: #ddd;
+  background-color: #FED8B1;
   color: black;
 }
 
@@ -42,10 +43,18 @@ body {
   padding: 10px;
 }
 
-/* Wrapper for charts */
+/* Wrapper for index charts */
 .charts-wrapper {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    gap: 10px;
+}
+
+
+.chart-slider-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
     grid-template-rows: auto;
     gap: 10px;
 }
@@ -56,15 +65,19 @@ table {
 }
 
 th {
-  background-color: #4b4557;
-  color: white;
+  background-color: #FFA500;
+  color:  #4b4557;
 }
 
 td {
   text-align: center;
 }
 
-tr:nth-child(even) {background-color: #f2f2f2;}
+tr:nth-child(odd) {background-color: #f2f2f2;}
+
+tr:hover {
+          background-color:  #FED8B1;
+        }
 
 .slider {
   -webkit-appearance: none;
@@ -122,3 +135,18 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 .tooltip:hover .tooltiptext {
   visibility: visible;
 }
+
+.c-1-color { background: orange; }
+
+.noUi-tooltip{display:block;position:absolute;border:1px solid #D9D9D9;border-radius:3px;background:#FED8B1;color:#000;padding:5px;text-align:center;white-space:nowrap}
+
+html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
+
+input[type=button] {
+  background-color: #FFA500;
+  border: none;
+  cursor: pointer;
+  padding: 7px 21px;
+}
+
+

@@ -1,133 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>LDM Diagnostics</title>
+<title>LiveData Migrator Diagnostics</title>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/css/diagnostics.css">
-<script src="/js/chart.min.js"></script>
-<script src="/js/common.js"></script>
+<link rel="stylesheet" href="css/nouislider.min.css">
+<link rel="stylesheet" href="css/diagnostics.css">
+<script src="js/chart.min.js"></script>
+<script src="js/chartjs-plugin-annotation.min.js"></script>
+<script src="js/common.js"></script>
+<script src="js/nouislider.min.js"></script>
+
 </head>
 
 <body>
 <!-- Navbar -->
 <div class="topnav">
-    <a href="/">Summary</a>
-    <a href="/throughput.html">Throughput</a>
-    <a id="system-link" href="/system.html">System</a>
-    <a id="network-link" href="/network.html">Network</a>
-    <a id="migrations-link" href="/migrations.html">Migrations</a>
-    <a id="filetrackers-link" href="/filetrackers.html">Transfers</a>
+    <a id="index-link", href="index.html"  style="background-color: #FED8B1;">Summary</a>
+    <a id="throughput-link", href="throughput.html">Throughput</a>
+    <a id="system-link" href="system.html">System</a>
+    <a id="network-link" href="network.html">Network</a>
+    <a id="migrations-link" href="migrations.html">Migrations</a>
+    <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
 </div>
 
-<div class="content">
-    <div>
-       <div class="tooltip">
-        <span class="tooltiptext">Click point in graph to report point in time Diagnostics.</span>
-         <h2>Throughput</h2>
-       </div>
-    </div>
-    <p>
-      <div>
-        <canvas id="ThroughPutChart"></canvas>
-      </div>
-    </p>
-    <p>
-       <div style="text-align:center">
-          <div class="tooltip">
-            <span class="tooltiptext">Move slider to report point in time Diagnostics.</span>
-            <h2 style="text-align:center"><span id="current-timestamp"></span></h2>
-         </div>
-       </div>
-       <div>
-       <table>
-       <tr>
-            <td style="text-align:right"><span id="startDate"></span></td>
-            <td style="width:50%"><input type="range" min=0 max="100" value="100" class="slider" id="myRange"></td>
-            <td style="text-align:left"><span id="endDate"></span></td>
-            <td style="text-align:right">Scale</td>
-            <td style="text-align:right">-</td>
-            <td style="width:10%"><input type="range" min=60 max="1440" value="240" class="slider" id="zoomSlider"></td>
-            <td style="text-align:left">+</td>
-       </tr>
-       </table>
-       </div>
-    </p>
-    <p>
-    <div>
-      <table id="diagnostic-summary-table" style="table-layout: fixed">
-         <tr><th colspan="8">Diagnostics <span id="diagnostic-summary-table-startDate"></span>  </th></tr>
-         <tr>
-             <td><a href="/throughput.html">Bytes Per Second</a></td>
-             <td><span id="diagnostic-summary-table-bytes-per-second"></span></td>
-             <td><a href="/throughput.html">Rate</a></td>
-             <td><span id="diagnostic-summary-table-rate-per-second"></span></td>
-             <td><a href="/throughput.html">Files For Period (<span id="diagnostic-summary-table-file-period"></span>s)</a></td>
-             <td><span id="diagnostic-summary-table-file-for-period"></span></td>
-             <td><a href="/throughput.html">Files Per Second</a></td>
-             <td><span id="diagnostic-summary-table-file-per-second"></span></td>
-         </tr>
-         <tr>
-             <td><a id='network-page-link' href="/network.html?index=-1">Network Connections</a></td>
-             <td><span id="diagnostic-summary-table-connections"></span></td>
-             <td>Rx Buffers</td>
-             <td><span id="diagnostic-summary-table-rx"></span></td>
-             <td>Tx Buffers</td>
-             <td><span id="diagnostic-summary-table-tx"></span></td>
-             <td>Retransmits</td>
-             <td><span id="diagnostic-summary-table-retrnsmit"></span></td>
-         </tr>
-         <tr>
-             <td><a id='system-cpu-link' href="/system.html">System CPU Load</a></td>
-             <td><span id="diagnostic-summary-system-cpu"></span></td>
-             <td><a id='process-cpu-link' href="/system.html">Process CPU Load</a></td>
-             <td><span id="diagnostic-summary-process-cpu"></span></td>
-             <td><a id='io-wait-link' href="/system.html">IO Wait Percentage</a></td>
-             <td><span id="diagnostic-summary-io-wait"></span></td>
-         </tr>
-         <tr>
-             <td><a id='event-queue-link'  href="/migrations.html">Event Queue</a></td>
-             <td><span id="diagnostic-summary-event-queue"></span></td>
-             <td><a id='pending-region-link' href="/migrations.html">Pending Region Queue</a></td>
-             <td><span id="diagnostic-summary-pending-region"></span></td>
-             <td><a id='action-queue-link' href="/migrations.html">Action Queue</a></td>
-             <td><span id="diagnostic-summary-action-queue"></span></td>
-         </tr>
-         <tr>
-             <td><a id='failed-path-link' href="/migrations.html">Total Failed Paths</a></td>
-             <td><span id="diagnostic-summary-failed-paths"></span></td>
-             <td><a id='retries-link' href="/migrations.html">Total Retries</a></td>
-             <td><span id="diagnostic-summary-total-retries"></span></td>
-         </tr>
-         <tr>
-            <td><a id='event-manager-link' href="/system.html">Event Manager</a></td>
-            <td>Events Added</td>
-            <td><span id="diagnostic-summary-event-manager-added"></span></td>
-            <td>Avg DB Time</td>
-            <td><span id="diagnostic-summary-event-manager-avg-db"></span></td>
-            <td>Max DB Time</td>
-            <td><span id="diagnostic-summary-event-manager-max-db"></span></td>
-         </tr>
-         <tr>
-            <td><a id="link-to-filetackers" href="/filetrackers.html?index=-1">File Transfers</a></td>
-            <td><span id="diagnostic-summary-active-transfers"></span></td>
-         </tr>
-      </table>    
+
+
+<!-- !PAGE CONTENT! -->
+<div  style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
+   <div>
+         <canvas id="ThroughPutChart" height="400"></canvas>
    </div>
-   </p>
-   <p>
+   <div  style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
+
+   <div style="margin-left:100px;margin-top:50px;margin-right:100px">
+      <table id="diagnostic-summary-table-0">   
+         <tr>
+            <th><span id="table-title-header">-</span></th>
+         <tr>
+      </table>
+      <table id="diagnostic-summary-table-1">   
+         <tr id="network-throughput-row" onclick="clickJump(this)" style="cursor: pointer;">
+             <th width="250px" >Network Throughput</th>
+             <td title="Average for period / Peak for period">Bandwidth</td>
+             <td><span id="diagnostic-summary-table-rate-per-second">-</span></td>
+             <td title="Average for period / Peak for period">Bytes Per Second</td>
+             <td><span id="diagnostic-summary-table-bytes-per-second">-</span></td>
+      <table id="diagnostic-summary-table-12" style="margin-top:10px">   
+         <tr id="file-throughput-row" onclick="clickJump(this)" style="cursor: pointer;">
+             <th width="250px" >File Throughput</th>
+             <td title="Average for period / Peak for period">Files Per Second</td>
+             <td><span id="diagnostic-summary-table-file-per-second">-</span></td>
+             <td>Files For Period (<span id="diagnostic-summary-table-file-period">-</span>s)</td>
+             <td><span id="diagnostic-summary-table-file-for-period">-</span></td>
+         </tr>
+      </table>
+      <table id="diagnostic-summary-table-7" style="margin-top:10px">   
+         <tr id="file-tracker-row" onclick="clickJump(this)" style="cursor: pointer;">
+            <th width="250px" title="The file transfers that were occuring when the diagnostics were recorded at this time. Clicking on this row will take you to the list of active file transfers.">Active File Transfers</th>
+            <td title="Count of the file transfers occuring when the diagnostic was recorded.">File Transfers</td>
+            <td><span id="diagnostic-summary-active-transfers">-</span></td>
+            <td title="The amount of data already transferred for files in transit. / The total size of the files in transit. ">Total Size Transferring</td>
+            <td><span id="diagnostic-summary-total-size-transfers">-</span></td>
+         </tr>
+      </table>
+      <table id="diagnostic-summary-table-5" style="margin-top:10px">   
+         <tr id="migration-row" onclick="clickJump(this)" style="cursor: pointer;">
+             <th width="250px" title="The three main queues of work for the migrations.">Migration Queues</th>
+             <td>Events</td>
+             <td><span id="diagnostic-summary-event-queue">-</span></td>
+             <td>Pending Regions</td>
+             <td><span id="diagnostic-summary-pending-region">-</span></td>
+             <td>Actions</td>
+             <td><span id="diagnostic-summary-action-queue">-</span></td>
+         </tr>
+      </table>
+      <table id="diagnostic-summary-table-6" style="margin-top:10px">   
+         <tr id="migration-failure-row" onclick="clickJump(this)" style="cursor: pointer;">
+             <th width="250px" >Migration Failure/Retry</th>
+             <td>Total Failed Paths</td>
+             <td><span id="diagnostic-summary-failed-paths">-</span></td>
+             <td>Total Retries</td>
+             <td><span id="diagnostic-summary-total-retries">-</span></td>
+             <td>Total Requeus</td>
+             <td><span id="diagnostic-summary-total-requeues">-</span></td>
+         </tr>
+      </table>
+      <table id="diagnostic-summary-table-4" style="margin-top:10px">   
+         <tr id="filesystem-event-row" onclick="clickJump(this)" style="cursor: pointer;">
+            <th width="250px" >FileSystem Events</th>
+            <td>Events Added</td>
+            <td><span id="diagnostic-summary-event-manager-added">-</span></td>
+            <td title="Sample of the average time spent on a database write in ms. If this figure is high then sysetm may be IO bound.">Avg Database Time</td>
+            <td><span id="diagnostic-summary-event-manager-avg-db">-</span></td>
+            <td title="Maxium database write time in ms. If this is high then system could be under IO pressure.">Max Database Time</td>
+            <td><span id="diagnostic-summary-event-manager-max-db">-</span></td>
+         </tr>
+      </table>
+      <table id="diagnostic-summary-table-2" style="margin-top:10px">   
+         <tr id="network-status-row" onclick="clickJump(this)" style="cursor: pointer;">
+             <th width="250px" >Network Status</th>
+             <td>Connections</td>
+             <td><span id="diagnostic-summary-table-connections">-</span></td>
+             <td title="Total data buffered by OS for reading from connections. This is data to be consumed from the source">Rx Buffers</td>
+             <td><span id="diagnostic-summary-table-rx">-</span></td>
+             <td title="Total data buffered by the OS for sending to the target.">Tx Buffers</td>
+             <td><span id="diagnostic-summary-table-tx">-</span></td>
+             <td title="Total TCP retransmits across the connections. Retransmits impacts network performance, this should be zero.">Retransmits</td>
+             <td><span id="diagnostic-summary-table-retransmit">-</span></td>
+         </tr>
+      </table>
+      <table id="diagnostic-summary-table-3" style="margin-top:10px; margin-bottom:10px">   
+         <tr id="system-row" onclick="clickJump(this)" style="cursor: pointer;">
+             <th width="250px" >System</td>
+             <td title="Amount of time the CPU is busy across all processes on the syste. 1.0 means 100% of the time.">System CPU</td>
+             <td><span id="diagnostic-summary-system-cpu">-</span></td>
+             <td title="Amount of CPU time devoted to application. 1.0 means 100% of the time. If this matches System CPU time then application is the main user of CPU resources.">Process CPU</td>
+             <td><span id="diagnostic-summary-process-cpu">-</span></td>
+             <td title="Percentage of time the OS stalls the system to service disk writes.">IO Wait</td>
+             <td><span id="diagnostic-summary-io-wait">-</span></td>
+             <td title="Total JVM GC time for the period of the Diagnostic, 60 seconds.">JVM GC Time (ms)</td>
+             <td><span id="diagnostic-summary-gc-time-period">-</span></td>
+             <td title="Average JVM GC time.">JVM GC Avg (ms)</td>
+             <td><span id="diagnostic-summary-gc-avg-time">-</span></td>
+         </tr>
+      </table>
+   </div>
+
    <div class="charts-wrapper">
       <div>
-        <canvas id="FileRatePercentiles"></canvas>
-      </div>
-      <div>
-        <canvas id="FileSizePercentiles"></canvas>
+        <canvas id="ActiveRatePercentiles"></canvas>
+        <form action=""><input type="button" style="display: block; margin: auto;" id="ActiveRatePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
       </div>
       <div>
         <canvas id="ActiveFileSizePercentiles"></canvas>
-      </div>
-      <div>
-        <canvas id="ActiveRatePercentiles"></canvas>
+        <form action=""><input type="button" style="display: block; margin: auto;" id="ActiveFileSizePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
       </div>
       <div>
         <canvas id="ActiveLatencyPercentiles"></canvas>
@@ -135,41 +142,63 @@
       <div>
         <canvas id="ActiveMigrations"></canvas>
       </div>
+      <div>
+        <canvas id="FileRatePercentiles"></canvas>
+        <form action=""><input type="button" style="display: block; margin: auto;" id="FileRatePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
+      </div>
+      <div>
+        <canvas id="FileSizePercentiles"></canvas>
+        <form action=""><input type="button" style="display: block; margin: auto;" id="FileSizePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
+      </div>
+      <div>
+        <canvas id="RecentMigrations" ></canvas>
+         <form action=""><input type="button" style="display: block; margin: auto;" id="RecentMigrationsButton", onclick="changeScaleButton(this);", value="log"></button></form>
+      </div>
    </div>
-   </p>
+
+<!-- !PAGE CONTENT! -->
 </div>
 
-<div class="footer">
-  <p></p>
-</div>
 
 <script>
-
-var myLine;
-var dates;
-var rate;
+// Datasets
+var activeFileTrackerPercentiles;
+var fileTrackerPercentiles;
+var fileTrackerRatePercentiles;
+var recentMigrations;
+var byterate;
 var filerate;
-var startIndex = 0;
-function doThroughPutChart(throughput) {
-  dates = throughput.timeStamp.map(toDate);
-  rate = throughput.bytesPerSecond.map(toMBSecond);
-  filerate = throughput.filesPerSecond;
-  let endIndex = startIndex + zoomScale;
-  if (endIndex >= dates.length) {
-    endIndex = dates.length;
-  }
+var jvmGCTimeMap = {};
 
-  myLine = new Chart("ThroughPutChart", {
+// Sliders
+var slider = document.getElementById('slider');
+
+// Charts
+var throughPutChart;
+var activeFileRateBarChart;
+var activeFileSizeBarChart;
+var activeFileLatencyBarChart;
+var activeMigrationsChart;
+var fileSizeBarChart;
+var fileRateBarChart;
+var recentMigrationsChart;
+
+
+function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
+  byterate = throughput.bytesPerSecond.map(toMBSecond);
+  filerate = throughput.filesPerSecond;
+
+  throughPutChart = new Chart("ThroughPutChart", {
     type: "line",
     data: {
-      labels: dates.slice(startIndex, endIndex),
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
       datasets: [{
         label: "Mbit/s",
         fill: false,
         lineTension: 0.4,
-        backgroundColor: transparentize(255, 99, 132, 0.5),
-        borderColor: 'rgb(255, 99, 132)',
-        data: rate.slice(startIndex, endIndex),
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
+        data: byterate.slice(startIndex, endIndex),
         yAxisID: 'y'
       },
       {
@@ -184,10 +213,31 @@ function doThroughPutChart(throughput) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
       plugins: {
-        title: {
-          display: true,
-          text: "Throughput Mbit/s"
+       annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: diagnosticsTimeSeries.middle,
+              xMax: diagnosticsTimeSeries.middle,
+              backgroundColor:  transparentize(255, 68, 51, 0.5),
+              borderColor: 'rgb(255, 68, 51)',
+              borderWidth: 2,
+           }
+        }
+      },
+      title: {
+          display: false,
+          fullSize: true, 
+          font: {
+               size: 24
+          },
+          text: "Throughput",
+          color: 'rgb(139, 64, 0)',
         }
       },
       scales: {
@@ -196,6 +246,13 @@ function doThroughPutChart(throughput) {
           title: {
             display: false,
             text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 20,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
           }
         },
         y: {
@@ -227,217 +284,146 @@ function doThroughPutChart(throughput) {
 }
 
 
-
-function getThroughPut(diagnostic) {
-  let bytesPerSecond = Math.round(diagnostic.bytesMigrated/diagnostic.period);	
-  document.getElementById("diagnostic-summary-table-bytes-per-second").innerHTML = 
-             humanFileSize(bytesPerSecond,true) + ' / ' + humanFileSize(diagnostic.peakBytesMigrated, true);
-  document.getElementById("diagnostic-summary-table-rate-per-second").innerHTML = 
-             toMBSecond(bytesPerSecond) + " Mbit/s" + ' / ' + toMBSecond(diagnostic.peakBytesMigrated) + " Mbit/s";
-  document.getElementById("diagnostic-summary-table-file-for-period").innerHTML  = diagnostic.filesMigrated;
-  document.getElementById("diagnostic-summary-table-file-period").innerHTML  = diagnostic.period;
-  document.getElementById("diagnostic-summary-table-file-per-second").innerHTML  = 
-            Math.round(diagnostic.filesMigrated/diagnostic.period) + ' / ' + diagnostic.peakFilesMigrated;
-}
-
-function getConnectionTotals(connectionTotals) {
-  let totalRxQueue = 0;
-  let totalTxQueue = 0;
-  let retrnsmt = 0;
-  for (var connectionTotal in connectionTotals) {
-    totalRxQueue = totalRxQueue + connectionTotals[connectionTotal].totalRxQueue;
-    totalTxQueue = totalTxQueue + connectionTotals[connectionTotal].totalTxQueue;
-    retrnsmt = retrnsmt + connectionTotals[connectionTotal].retrnsmt;
+function updateThroughPutChart() {
+  if (typeof throughPutChart === 'undefined') {
+     return;
   }
-  return {totalRxQueue, totalTxQueue, retrnsmt}
+
+  let startIndex =  diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start);
+  let endIndex = diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.end);
+  throughPutChart.data.labels = 
+            diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
+  throughPutChart.data.datasets[0].data = byterate.slice(startIndex, endIndex);
+  throughPutChart.data.datasets[1].data = filerate.slice(startIndex, endIndex);
+  throughPutChart.options.plugins.annotation.annotations.line1.xMin = 
+           diagnosticsTimeSeries.middle;
+  throughPutChart.options.plugins.annotation.annotations.line1.xMax = 
+           diagnosticsTimeSeries.middle;
+  throughPutChart.update();
 }
 
-function getConnectionDetails(diagnostic, timeStampIndex) {
-  let totals = getConnectionTotals(diagnostic.connectionTotals);
-  document.getElementById("diagnostic-summary-table-connections").innerHTML = diagnostic.connections.length;
-  document.getElementById("diagnostic-summary-table-rx").innerHTML = 
-	humanFileSize(totals.totalRxQueue, true) + ' (' + totals.totalRxQueue + ')';
-  document.getElementById("diagnostic-summary-table-tx").innerHTML = 
-	humanFileSize(totals.totalTxQueue, true) + ' (' + totals.totalTxQueue + ')';
-  document.getElementById("diagnostic-summary-table-retrnsmit").innerHTML = totals.retrnsmt;
-  let a = document.getElementById('network-page-link');
-  a.href = "/network.html?index=" + timeStampIndex;
-}
 
-function getCPULoad(diagnostic, timeStampIndex) {
- document.getElementById("diagnostic-summary-system-cpu").innerHTML = diagnostic.systemCpuLoad.toFixed(5);
- document.getElementById("diagnostic-summary-process-cpu").innerHTML = diagnostic.processCpuLoad.toFixed(5);
-  let a = document.getElementById('system-cpu-link');
-  a.href = "/system.html?index=" + timeStampIndex;
-  a = document.getElementById('process-cpu-link');
-  a.href = "/system.html?index=" + timeStampIndex;
-  a = document.getElementById('io-wait-link');
-  a.href = "/system.html?index=" + timeStampIndex;
-  a = document.getElementById('event-manager-link');
-  a.href = "/system.html?index=" + timeStampIndex;
-}
-
-function getIOLoad(diagnostic) {
-  let value = '-';
-  if (diagnostic.hasOwnProperty('iowaitPercentage')) {
-     value = diagnostic.iowaitPercentage;
+function changeScaleButton(button) {
+  if (button.value === "log") {
+    button.value = "linear";
+  } else {
+    button.value = "log";
   }
-  document.getElementById("diagnostic-summary-io-wait").innerHTML = value;
-}
-
-function getMigrationDiagnostic(diagnostic, timeStamp) {
-  document.getElementById("diagnostic-summary-pending-region").innerHTML = diagnostic.totalPendingRegions;
-  document.getElementById("diagnostic-summary-failed-paths").innerHTML = diagnostic.totalFailedPaths;
-  document.getElementById("diagnostic-summary-total-retries").innerHTML = diagnostic.totalPathRetryCount;
-  let a = document.getElementById('event-queue-link');
-  a.href = "/migrations.html?index=" + timeStamp;
-  a = document.getElementById('pending-region-link');
-  a.href = "/migrations.html?index=" + timeStamp;
-  a = document.getElementById('action-queue-link');
-  a.href = "/migrations.html?index=" + timeStamp;
-  a = document.getElementById('failed-path-link');
-  a.href = "/migrations.html?index=" + timeStamp;
-  a = document.getElementById('retries-link');
-  a.href = "/migrations.html?index=" + timeStamp;
-}
-
-function getEventManagerDiagnostic(diagnostic) {
-  document.getElementById("diagnostic-summary-event-queue").innerHTML = diagnostic.totalQueuedEvents;
-  document.getElementById("diagnostic-summary-event-manager-added").innerHTML = 
-         diagnostic.totalEventAdded;
-  document.getElementById("diagnostic-summary-event-manager-avg-db").innerHTML = 
-         diagnostic.meanDbTime;
-  document.getElementById("diagnostic-summary-event-manager-max-db").innerHTML = 
-         diagnostic.maxDbTime;
-}
-
-function getFileTracker(diagnostic, timeStamp) {
-  document.getElementById("diagnostic-summary-active-transfers").innerHTML = 
-         diagnostic.fileTrackers.length;
-  let a = document.getElementById('link-to-filetackers');
-  a.href = "/filetrackers.html?index=" + timeStamp;
-}
-
-
-
-function processDiagnostic(json) {
- // No value for this until actions are added.
- document.getElementById("diagnostic-summary-action-queue").innerHTML  = 0;
- let actionTotal = 0;
- for (let j in json.diagnosticSet.diagnostics) {
-   let diagnostic = json.diagnosticSet.diagnostics[j]
-   switch (diagnostic.type) {
-      case "NetworkStatusDTO":
-         getConnectionDetails(diagnostic, json.diagnosticSet.timeStamp);
-         break;
-      case "ThroughputDiagnosticDTO":
-         getThroughPut(diagnostic);
-         break;
-      case "CpuLoadDiagnosticDTO":
-         getCPULoad(diagnostic, json.diagnosticSet.timeStamp);
-         break;
-      case "LinuxPressureDiagnosticDTO":
-         getIOLoad(diagnostic);
-         break;
-      case "MigrationDiagnosticDTO":
-         getMigrationDiagnostic(diagnostic, json.diagnosticSet.timeStamp);
-         break;
-      case "ActionStoreDiagnosticDTO":
-         actionTotal += diagnostic.totalUnExecutedEvents;
-         break;
-      case "EventManagerDiagnosticDTO":
-         getEventManagerDiagnostic(diagnostic);
-         break;
-      case "FileTrackerDiagnosticDTO":
-         getFileTracker(diagnostic, json.diagnosticSet.timeStamp);
-         break;
-      default:
-         break;
-   }
- }
- document.getElementById("diagnostic-summary-action-queue").innerHTML  = actionTotal;
- document.getElementById("diagnostic-summary-table-startDate").innerHTML  = new Date(json.diagnosticSet.timeStamp).toISOString();
-}
-
-
-
-var zoomSlider = document.getElementById("zoomSlider");
-var zoomScale = 240;
-zoomSlider.oninput = function() {
-  zoomScale = parseInt(this.value);
-  redrawChart();
-}
-
-
-
-function processSlider(startDate, endDate, max, index) {
-   let newValue = index > 0 ? index : 0;
-   document.getElementById("myRange").max = max;
-   document.getElementById("myRange").value = newValue;
-   document.getElementById("startDate").innerHTML = new Date(startDate).toISOString();
-   document.getElementById("endDate").innerHTML  = new Date(endDate).toISOString();
-   document.getElementById("current-timestamp").innerHTML = new Date(startDate).toISOString();
-}
-
-var slider = document.getElementById("myRange");
-slider.oninput = function() {
-  startIndex = parseInt(this.value);
-  redrawChart();
-  let offset = startIndex + Math.floor(zoomScale/2); 
-  if (offset > timeStamps.length - 1) {
-      if (startIndex < timeStamps.length - 1) {
-        offset = startIndex;
-      } else {
-        offset = timeStamps.length - 1;
-      }
+  // Need to redraw chart.
+  if (button.id === "ActiveRatePercentilesButton") {
+    processActiveFileRatePercentiles(activeFileTrackerPercentiles);
+    return;
   }
-  document.getElementById("current-timestamp").innerHTML = new Date(timeStamps[offset]).toISOString();
-}
-
-slider.onchange = function() {
-  startIndex = parseInt(this.value);
-  let offset = startIndex + Math.floor(zoomScale/2); 
-  if (offset > timeStamps.length - 1) {
-      if (startIndex < timeStamps.length - 1) {
-        offset = startIndex;
-      } else {
-        offset = timeStamps.length - 1;
-      }
+  if (button.id === "ActiveFileSizePercentilesButton") {
+    processActiveFileSizePercentiles(activeFileTrackerPercentiles);
+    return;
   }
-  document.getElementById("current-timestamp").innerHTML = new Date(timeStamps[offset]).toISOString();
-  getDiagnostic(timeStamps[offset]);
-}
-
-
-function redrawChart() {
-  let endIndex = startIndex + zoomScale;
-  if (endIndex > dates.length) {
-    endIndex = dates.length;
+  if (button.id === "FileSizePercentilesButton") {
+    processFileSizePercentiles(fileTrackerPercentiles);
+    return;
   }
-  myLine.data.labels = dates.slice(startIndex, endIndex);
-  myLine.data.datasets[0].data = rate.slice(startIndex, endIndex);
-  myLine.data.datasets[1].data = filerate.slice(startIndex, endIndex);  
-  myLine.update();
+  if (button.id === "FileRatePercentilesButton") {
+    processFileRatePercentiles(fileTrackerRatePercentiles);
+    return;
+  }
+  if (button.id === "RecentMigrationsButton") {
+    processRecentActivityMigrations(recentMigrations);
+    return;
+  }
 }
 
-
-function getFileRatePercentiles(json) {
-  var diagnostic;
-  let labels = [];
-  let values = [];
-  for (let j in json.diagnosticSet.diagnostics) {
-    diagnostic = json.diagnosticSet.diagnostics[j];
-    if (diagnostic.type === "FileTrackerDiagnosticDTO") {
+function getRecentMigrations(diagnosticSet) {
+  let diagnostic;
+  for (let i in diagnosticSet.diagnostics) {
+    diagnostic = diagnosticSet.diagnostics[i];
+    if (diagnostic.type === 'FileTrackerDiagnosticDTO') {
       break;
     }
   }
-  fileTrackerPercentile = diagnostic.fileTransferRatePercentiles.fileTrackerPercentile;
-  for (let i in fileTrackerPercentile) {
-     labels.push(fileTrackerPercentile[i].percentile);
-     values.push(fileTrackerPercentile[i].value);
-  }
-  return {labels, values};
+  let recentActivityByMigration = diagnostic.recentActivityByMigration;
+  let translatedMap = new Map();
+  for (const key in recentActivityByMigration) {
+    if (migrationIdMap[key]) {
+       translatedMap.set(migrationIdMap[key], recentActivityByMigration[key]);
+    } else {
+       translatedMap.set(key, recentActivityByMigration[key]);
+    }  
+  };    
+
+  let recentActivityMigrationName  = [];
+  let recentActivityMigrationValue = [];
+  let translatedMapSorted = new Map([...translatedMap.entries()].sort((a,b) => b[1] - a[1]));
+  translatedMapSorted.forEach(function(value, key) {
+     recentActivityMigrationName.push(key);
+     recentActivityMigrationValue.push(value);
+  })    
+  return {recentActivityMigrationName, recentActivityMigrationValue};
 }
+
+
+function processRecentActivityMigrations(recentMigrations) {
+  let scaleButton = document.getElementById("RecentMigrationsButton").value;  
+  let scaleType = 'linear'
+  if (scaleButton === "linear") {
+     scaleType = 'logarithmic';
+  }
+
+  const data = {
+    labels: recentMigrations.recentActivityMigrationName,
+    datasets: [
+    {
+      label: 'Number of files recently transferred for this Migration.',
+      data: recentMigrations.recentActivityMigrationValue,
+      backgroundColor: transparentize(255, 165, 0, 0.9),
+      borderColor: 'rgb(255,165,0)',
+    }]
+  };
+
+  
+  const config = {
+  type: 'bar',
+  data: data,
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+    },
+    scales : {
+      x : {
+        display: true,
+        type: scaleType,
+      },
+      y : {
+         display: false,
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: 'Migrations with recent file transfers at ' + diagnosticsTimeSeries.middle,
+          font: {
+               size: 16
+          },
+      },
+      tooltip: {
+        callbacks: {
+           title: function(context) {
+              return context[0].label
+            }
+        },
+      },
+     },
+   },
+ };
+ if (recentMigrationsChart) {
+   recentMigrationsChart.destroy();
+ }
+ recentMigrationsChart = new Chart("RecentMigrations", config);
+} 
 
 function getFileSizePercentiles(json) {
   var diagnostic;
@@ -457,9 +443,99 @@ function getFileSizePercentiles(json) {
   return {labels, values};
 }
 
-var fileSizeBarChart;
-function processFileSizePercentiles(json) {
-  precentiles = getFileSizePercentiles(json);
+function getFileRatePercentiles(json) {
+  var diagnostic;
+  let labels = [];
+  let values = [];
+  for (let j in json.diagnosticSet.diagnostics) {
+    diagnostic = json.diagnosticSet.diagnostics[j];
+    if (diagnostic.type === "FileTrackerDiagnosticDTO") {
+      break;
+    }
+  }
+  fileTrackerPercentile = diagnostic.fileTransferRatePercentiles.fileTrackerPercentile;
+  for (let i in fileTrackerPercentile) {
+     labels.push(fileTrackerPercentile[i].percentile);
+     values.push(fileTrackerPercentile[i].value);
+  }
+  return {labels, values};
+}
+
+function processFileRatePercentiles(precentiles) {
+  let scaleButton = document.getElementById("FileRatePercentilesButton").value;  
+  let scaleType = 'linear'
+  if (scaleButton === "linear") {
+     scaleType = 'logarithmic';
+  }
+
+  const data = {
+    labels: precentiles.labels,
+    datasets: [
+    {
+      label: 'File Transfer Rate Percentiles',
+      data: precentiles.values,
+      backgroundColor: transparentize(255, 165, 0, 0.9),
+      borderColor: 'rgb(255,165,0)',
+    }]
+  };
+
+  const config = {
+  type: 'bar',
+  data: data,
+  options: {
+    responsive: true,
+    scales: {
+      x: {
+        display: true,
+      },
+      y: {
+        display: true,
+        type: scaleType,
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: 'File Transfers Rate Percentiles for recently migrated files at ' + diagnosticsTimeSeries.middle,
+          font: {
+               size: 16
+          },
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+
+            if (context.parsed.y !== null) {
+                label = toMBDecimal(context.parsed.y).toFixed(3) + 'Mbit/s';
+            }
+            return label;
+          },
+          title: function(context) {
+            return context[0].label + 'th Percentile File Transfer Rate'
+          }
+        }
+      }
+     },
+   },
+ };
+ if (fileRateBarChart) {
+   fileRateBarChart.destroy();
+ }
+ fileRateBarChart = new Chart("FileRatePercentiles", config);
+}
+
+
+
+function processFileSizePercentiles(precentiles) {
+  let scaleButton = document.getElementById("FileSizePercentilesButton").value;  
+  let scaleType = 'linear'
+  if (scaleButton === "linear") {
+     scaleType = 'logarithmic';
+  }
 
   const data = {
     labels: precentiles.labels,
@@ -472,20 +548,47 @@ function processFileSizePercentiles(json) {
     }]
   };
 
-  const config = {
+  let config = {
   type: 'bar',
   data: data,
   options: {
     responsive: true,
+    scales: {
+      x: {
+        display: true,
+      },
+      y: {
+        display: true,
+        type: scaleType,
+      }
+    },
     plugins: {
       legend: {
         position: 'top',
       },
       title: {
         display: true,
-        text: 'File Size Percentiles for last 10,000 Files Migrated at ' + new Date(json.diagnosticSet.timeStamp).toISOString(),
+        text: 'File Size Percentiles for recently migrated files at ' + diagnosticsTimeSeries.middle,
+          font: {
+               size: 16
+          },
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+
+            if (context.parsed.y !== null) {
+                label = humanFileSize(context.parsed.y);
+            }
+            return label;
+          },
+          title: function(context) {
+            return context[0].label + 'th Percentile File Size'
+          }
+        }
       }
-     }
+     },
    },
  };
  if (fileSizeBarChart) {
@@ -494,20 +597,15 @@ function processFileSizePercentiles(json) {
  fileSizeBarChart = new Chart("FileSizePercentiles", config);
 }
 
-
-
-var fileRateBarChart;
-function processFileRatePercentiles(json) {
-  precentiles = getFileRatePercentiles(json);
-
+function processActiveFileLatencyPercentiles(activeFileTrackerPercentiles) {
   const data = {
-    labels: precentiles.labels,
+    labels: activeFileTrackerPercentiles.fileTrackerPercentileRange,
     datasets: [
     {
-      label: 'File Transfer Rate Percentiles',
-      data: precentiles.values,
-      borderColor: 'rgb(54, 162, 235)',
-      backgroundColor: transparentize(54, 162, 235, 0.5),
+      label: 'Active File Latency (seconds) Percentiles',
+      data: activeFileTrackerPercentiles.fileTrackersLatencyPercentiles,
+      backgroundColor: transparentize(255, 165, 0, 0.9),
+      borderColor: 'rgb(255,165,0)',
     }]
   };
 
@@ -522,25 +620,137 @@ function processFileRatePercentiles(json) {
       },
       title: {
         display: true,
-        text: 'File Tranfers Rate Percentiles for last 10,000 Files Migrated at ' + new Date(json.diagnosticSet.timeStamp).toISOString(),
+        text: 'Latency for ' + activeFileTrackerPercentiles.count + ' Active Transfers at ' + diagnosticsTimeSeries.middle,
+          font: {
+               size: 16
+          },
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+
+            if (context.parsed.y !== null) {
+                label = secondsToTime(context.parsed.y);
+            }
+            return label;
+          },
+          title: function(context) {
+            return context[0].label + 'th Percentile File Latency.'
+          }
+        }
       }
-     }
+     },
    },
  };
- if (fileRateBarChart) {
-   fileRateBarChart.destroy();
+ if (activeFileLatencyBarChart) {
+   activeFileLatencyBarChart.destroy();
  }
- fileRateBarChart = new Chart("FileRatePercentiles", config);
+ activeFileLatencyBarChart = new Chart("ActiveLatencyPercentiles", config);
 }
 
-var activeFileSizeBarChart;
-function processActiveFileSizePercentiles(fileTrackerPercentiles, timeStamp) {
+document.getElementById("ActiveMigrations").onclick = function(evt) {
+  var activePoint = activeMigrationsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+  if (activePoint.length > 0) {
+     var clickedElementindex = activePoint[0].index;
+     let migration_name = activeMigrationsChart.data.labels[clickedElementindex];
+     uri = getMigrationLink(migration_name);
+     window.location.href = uri;
+  }          
+}            
+             
+document.getElementById("RecentMigrations").onclick = function(evt) {
+  var activePoint = recentMigrationsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);  
+  if (activePoint.length > 0) {
+     var clickedElementindex = activePoint[0].index;
+     let migration_name = recentMigrationsChart.data.labels[clickedElementindex];
+     uri = getMigrationLink(migration_name);
+     window.location.href = uri;
+  }      
+}     
+
+
+function processActiveFileRatePercentiles(activeFileTrackerPercentiles) {
+  let scaleButton = document.getElementById("ActiveRatePercentilesButton").value;  
+  let scaleType = 'linear'
+  if (scaleButton === "linear") {
+     scaleType = 'logarithmic';
+  }
+
   const data = {
-    labels: fileTrackerPercentiles.fileTrackerPercentileRange,
+    labels: activeFileTrackerPercentiles.fileTrackerPercentileRange,
+    datasets: [
+    {
+      label: 'Active File Transfer Rate Percentiles',
+      data: activeFileTrackerPercentiles.fileTrackersRatePercentiles,
+      backgroundColor: transparentize(255, 165, 0, 0.9),
+      borderColor: 'rgb(255,165,0)',
+    }]
+  };
+
+  const config = {
+  type: 'bar',
+  data: data,
+  options: {
+    responsive: true,
+    scales: {
+      x: {
+        display: true,
+      },
+      y: {
+        display: true,
+        type: scaleType,
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: 'File Transfer Rate for ' + activeFileTrackerPercentiles.count + ' Active Transfers at ' +  diagnosticsTimeSeries.middle,
+          font: {
+               size: 16
+          },
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+
+            if (context.parsed.y !== null) {
+                label = toMBDecimal(context.parsed.y).toFixed(3) + 'Mbit/s';
+            }
+            return label;
+          },
+          title: function(context) {
+            return context[0].label + 'th Percentile File Transfer Rate'
+          }
+        }
+      }
+     },
+   },
+ };
+ if (activeFileRateBarChart) {
+   activeFileRateBarChart.destroy();
+ }
+ activeFileRateBarChart = new Chart("ActiveRatePercentiles", config);
+}
+
+
+function processActiveFileSizePercentiles(activeFileTrackerPercentiles, timeStamp) {
+  let scaleButton = document.getElementById("ActiveFileSizePercentilesButton").value;  
+  let scaleType = 'linear'
+  if (scaleButton === "linear") {
+     scaleType = 'logarithmic';
+  }
+
+  const data = {
+    labels: activeFileTrackerPercentiles.fileTrackerPercentileRange,
     datasets: [
     {
       label: 'Active File Transfer Size Percentiles',
-      data: fileTrackerPercentiles.fileTrackersSizePercentiles,
+      data: activeFileTrackerPercentiles.fileTrackersSizePercentiles,
       borderColor: 'rgb(54, 162, 235)',
       backgroundColor: transparentize(54, 162, 235, 0.5),
     }]
@@ -551,15 +761,42 @@ function processActiveFileSizePercentiles(fileTrackerPercentiles, timeStamp) {
   data: data,
   options: {
     responsive: true,
+    scales: {
+      x: {
+        display: true,
+      },
+      y: {
+        display: true,
+        type: scaleType,
+      }
+    },
     plugins: {
       legend: {
         position: 'top',
       },
       title: {
         display: true,
-        text: 'File Size for '+ fileTrackerPercentiles.count + ' Active Transfers at ' + new Date(timeStamp).toISOString()
-      }
+        text: 'File Size for '+ activeFileTrackerPercentiles.count + ' Active Transfers at ' + diagnosticsTimeSeries.middle,
+          font: {
+               size: 16
+          },
+      },
+     tooltip: {
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+
+            if (context.parsed.y !== null) {
+                label = humanFileSize(context.parsed.y);
+            }
+            return label;
+          },
+          title: function(context) {
+            return context[0].label + 'th Percentile File Size'
+          }
+        }
      }
+     },
    },
  };
  if (activeFileSizeBarChart) {
@@ -569,88 +806,18 @@ function processActiveFileSizePercentiles(fileTrackerPercentiles, timeStamp) {
 }
 
 
-var activeFileRateBarChart;
-function processActiveFileRatePercentiles(fileTrackerPercentiles, timeStamp) {
+function processActiveMigrations(activeFileTrackerPercentiles) {
+  // Convert ids to names
+  migrationNames = [] 
+  for (let i in activeFileTrackerPercentiles.fileTrackerMigrationMapKeys) {
+     migrationNames.push(migrationIdMap[activeFileTrackerPercentiles.fileTrackerMigrationMapKeys[i]]);
+  }
   const data = {
-    labels: fileTrackerPercentiles.fileTrackerPercentileRange,
+    labels: migrationNames,
     datasets: [
     {
-      label: 'Active File Transfer Rate Percentiles',
-      data: fileTrackerPercentiles.fileTrackersRatePercentiles,
-      borderColor: 'rgb(54, 162, 235)',
-      backgroundColor: transparentize(54, 162, 235, 0.5),
-    }]
-  };
-
-  const config = {
-  type: 'bar',
-  data: data,
-  options: {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top',
-      },
-      title: {
-        display: true,
-        text: 'File Transfer Rate for ' + fileTrackerPercentiles.count + ' Active Transfers at ' +  new Date(timeStamp).toISOString()
-      }
-     }
-   },
- };
- if (activeFileRateBarChart) {
-   activeFileRateBarChart.destroy();
- }
- activeFileRateBarChart = new Chart("ActiveRatePercentiles", config);
-}
-
-var activeFileLatencyBarChart;
-function processActiveFileLatencyPercentiles(fileTrackerPercentiles, timeStamp) {
-  const data = {
-    labels: fileTrackerPercentiles.fileTrackerPercentileRange,
-    datasets: [
-    {
-      label: 'Active File Latency (ms) Percentiles',
-      data: fileTrackerPercentiles.fileTrackersLatencyPercentiles,
-      borderColor: 'rgb(54, 162, 235)',
-      backgroundColor: transparentize(54, 162, 235, 0.5),
-    }]
-  };
-
-  const config = {
-  type: 'bar',
-  data: data,
-  options: {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top',
-      },
-      title: {
-        display: true,
-        text: 'Latency for ' + fileTrackerPercentiles.count + ' Active Transfers at ' + new Date(timeStamp).toISOString()
-      }
-     }
-   },
- };
- if (activeFileLatencyBarChart) {
-   activeFileLatencyBarChart.destroy();
- }
- activeFileLatencyBarChart = new Chart("ActiveLatencyPercentiles", config);
-}
-
-function firstChars(value, index, array) {
-   return value.slice(0, 8);
-}
-
-var activeMigrationsChart;
-function processActiveMigrations(fileTrackerPercentiles, timeStamp) {
-  const data = {
-    labels: fileTrackerPercentiles.fileTrackerMigrationMapKeys.map(firstChars).slice(0, 8),
-    datasets: [
-    {
-      label: 'Active File Tranfers for Migration',
-      data: fileTrackerPercentiles.fileTrackerMigrationMapValues.slice(0, 8),
+      label: 'Active File Transfers for Migration',
+      data: activeFileTrackerPercentiles.fileTrackerMigrationMapValues,
       borderColor: 'rgb(54, 162, 235)',
       backgroundColor: transparentize(54, 162, 235, 0.5),
     }]
@@ -662,15 +829,33 @@ function processActiveMigrations(fileTrackerPercentiles, timeStamp) {
   options: {
     indexAxis: 'y',
     responsive: true,
+    onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+    },
+    scales : {
+      y : {
+         display: false,
+      }
+    },
     plugins: {
       legend: {
         position: 'top',
       },
       title: {
         display: true,
-        text: 'Active Migrations for ' + fileTrackerPercentiles.count + ' Active Transfers at ' + new Date(timeStamp).toISOString()
-      }
-     }
+        text: 'Migrations with ' + activeFileTrackerPercentiles.count + ' total Active Transfers at ' + diagnosticsTimeSeries.middle,
+          font: {
+               size: 16
+          },
+      },
+      tooltip: {
+        callbacks: {
+           title: function(context) {
+              return context[0].label
+            }
+        },
+      },
+     },
    },
  };
  if (activeMigrationsChart) {
@@ -680,130 +865,378 @@ function processActiveMigrations(fileTrackerPercentiles, timeStamp) {
 }
 
 
-function getCurrentTransferPercentiles(diagnosticSet) {
-  let diagnostic;
-  for (let i in diagnosticSet.diagnostics) {
-    diagnostic = diagnosticSet.diagnostics[i];
-    if (diagnostic.type === 'FileTrackerDiagnosticDTO') {
-      break;
-    }
-  }
-  let fileTrackers = diagnostic.fileTrackers;
-
-  let size = [];
-  let rate = [];
-  let latency = [];
-  let count = 0;
-  let fileTrackerMigrationMap = new Map();
-  for (let j in fileTrackers) {
-    let fileTracker = fileTrackers[j];
-    size.push(fileTracker.FileLength);
-    rate.push(fileTracker.BytesPerSecond);
-    latency.push(fileTracker.EventLatency);
-    if (fileTrackerMigrationMap.has(fileTracker.MigrationId)) {
-      fileTrackerMigrationMap.set(fileTracker.MigrationId, fileTrackerMigrationMap.get(fileTracker.MigrationId) + 1);
-    } else {
-      fileTrackerMigrationMap.set(fileTracker.MigrationId, 0);
-    }
-    count = count + 1;
-  }
-  fileTrackerMigrationMapKeys = [];
-  fileTrackerMigrationMapValues = [];
-  fileTrackerMigrationMapSorted = new Map([...fileTrackerMigrationMap.entries()].sort((a, b) => b[1] - a[1]));
-  fileTrackerMigrationMapSorted.forEach(function(value, key) {
-    fileTrackerMigrationMapKeys.push(key);
-    fileTrackerMigrationMapValues.push(value);
-  })
-
-  let fileTrackerPercentileRange = [];
-  for (var i=1; i <= 100; i += 1){
-    fileTrackerPercentileRange.push(i);
-  }
-  fileTrackersSizePercentiles = percentile(fileTrackerPercentileRange, size);
-  fileTrackersRatePercentiles = percentile(fileTrackerPercentileRange, rate);
-  fileTrackersLatencyPercentiles = percentile(fileTrackerPercentileRange, latency);
-  return {count, fileTrackerPercentileRange, fileTrackersSizePercentiles, fileTrackersRatePercentiles, fileTrackersLatencyPercentiles, fileTrackerMigrationMapKeys, fileTrackerMigrationMapValues }
+function updateTableDate(newDate) {
+     document.getElementById("table-title-header").innerHTML = 
+        newDate;
 }
 
-
-
-
-
-
-async function getDiagnostic(index) {
-  let url = '/api/diagnostic?index=' + index;
-  try {
-    let res = await fetch(url);
-    let json =  await res.json();
-    let fileTrackerPercentiles = getCurrentTransferPercentiles(json.diagnosticSet);
-    processDiagnostic(json);
-    processFileSizePercentiles(json);
-    processFileRatePercentiles(json);
-    processActiveFileSizePercentiles(fileTrackerPercentiles,json.diagnosticSet.timeStamp);
-    processActiveFileRatePercentiles(fileTrackerPercentiles, json.diagnosticSet.timeStamp);
-    processActiveFileLatencyPercentiles(fileTrackerPercentiles, json.diagnosticSet.timeStamp);
-    processActiveMigrations(fileTrackerPercentiles, json.diagnosticSet.timeStamp);
-    return;
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-var timeStamps;
-async function getThroughputChart(index) {
-  let url = '/api/throughput';
-  try {
-    let res = await fetch(url);
-    let json =  await res.json();
-    timeStamps = json.timeStamp;
-    if (pageIndex > 0 ) {
-       for (let i = 0; i < timeStamps.length; i++) {
-         if (timeStamps[i] === pageIndex) {
-            startIndex = i;
-            break; 
-         }
-       }	       	      
-    }
-    doThroughPutChart(json);
-    processSlider(json.timeStamp[0], json.timeStamp[json.timeStamp.length - 1], json.timeStamp.length, startIndex);
-    return;
-  } catch (error) {
-    console.log(error);
-  }
+function onSliderUpdate() {
 }
 
 document.getElementById("ThroughPutChart").onclick = function(evt) {
-  var activePoint = myLine.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  var activePoint = throughPutChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
     var clickedElementindex = activePoint[0].index;
-    document.getElementById("diagnostic-summary-table-startDate").innerHTML  = "";
-    getDiagnostic(timeStamps[clickedElementindex + startIndex]);
-    reWriteLinks(timeStamps[startIndex + clickedElementindex]);	  
+    diagnosticsTimeSeries.middle = 
+           diagnosticsTimeSeries.dates[
+                 diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
+                      + clickedElementindex];
+    getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
+    throughPutChart.options.plugins.annotation.annotations.line1.xMin = 
+           diagnosticsTimeSeries.middle;
+    throughPutChart.options.plugins.annotation.annotations.line1.xMax = 
+           diagnosticsTimeSeries.middle;
+    throughPutChart.update();
+    slider.noUiSlider.setHandle(1, diagnosticsTimeSeries.middle, false, false);
+    reWriteLinks();
   }
 };
 
+function onSliderChange() {
+    updateThroughPutChart();
+    getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
+    reWriteLinks();
+}
 
-function reWriteLinks(index) {
-    document.getElementById('system-link').href = "/?system=" + index;
-    document.getElementById('filetrackers-link').href = "/filetrackers.html?index=" + index;
-    document.getElementById('migrations-link').href = "/migrations.html?index=" + index;
-    document.getElementById('network-link').href = "/network.html?index=" + index;
+function getConnectionTotals(connectionTotals) {
+  let totalRxQueue = 0;
+  let totalTxQueue = 0;
+  let retrnsmt = 0;
+  for (var connectionTotal in connectionTotals) {
+    totalRxQueue = totalRxQueue + connectionTotals[connectionTotal].totalRxQueue;
+    totalTxQueue = totalTxQueue + connectionTotals[connectionTotal].totalTxQueue;
+    retrnsmt = retrnsmt + connectionTotals[connectionTotal].retrnsmt;
+  }
+  return {totalRxQueue, totalTxQueue, retrnsmt}
+}
+
+function getConnectionDetails(diagnostic) {
+  let totals = getConnectionTotals(diagnostic.connectionTotals);
+  document.getElementById("diagnostic-summary-table-connections").innerHTML = diagnostic.connections.length;
+
+  document.getElementById("diagnostic-summary-table-rx").innerHTML = 
+	humanFileSize(totals.totalRxQueue, true) + ' (' + totals.totalRxQueue.toLocaleString("en-US") + ')';
+
+  document.getElementById("diagnostic-summary-table-tx").innerHTML = 
+	humanFileSize(totals.totalTxQueue, true) + ' (' + totals.totalTxQueue.toLocaleString("en-US") + ')';
+
+  if (totals.retrnsmt > 1) {
+    document.getElementById("diagnostic-summary-table-retransmit").innerHTML = 
+        "<div style=\"font-weight: bold;color:red\">" + totals.retrnsmt + "</div>";
+  } else if (totals.retrnsmt === 1) {
+    document.getElementById("diagnostic-summary-table-retransmit").innerHTML =
+        "<div style=\"font-weight: bold;color:orange\">" + totals.retrnsmt + "</div>";
+  } else {
+    document.getElementById("diagnostic-summary-table-retransmit").innerHTML = totals.retrnsmt;
+  }
+}
+
+function getThroughPut(diagnostic) {
+  let bytesPerSecond = Math.round(diagnostic.bytesMigrated/diagnostic.period);	
+  document.getElementById("diagnostic-summary-table-bytes-per-second").innerHTML = 
+             humanFileSize(bytesPerSecond,true) + ' / ' + humanFileSize(diagnostic.peakBytesMigrated, true);
+  document.getElementById("diagnostic-summary-table-rate-per-second").innerHTML = 
+             toMBSecond(bytesPerSecond) + " Mbit/s" + ' / ' + toMBSecond(diagnostic.peakBytesMigrated) + " Mbit/s";
+  document.getElementById("diagnostic-summary-table-file-for-period").innerHTML  = diagnostic.filesMigrated;
+  document.getElementById("diagnostic-summary-table-file-period").innerHTML  = diagnostic.period;
+  document.getElementById("diagnostic-summary-table-file-per-second").innerHTML  = 
+            Math.round(diagnostic.filesMigrated/diagnostic.period) + ' / ' + diagnostic.peakFilesMigrated;
+}
+
+function getCPULoad(diagnostic) {
+  if (diagnostic.systemCpuLoad > 0.9) {
+    document.getElementById("diagnostic-summary-system-cpu").innerHTML =
+         "<div style=\"font-weight: bold;color:red\">" + diagnostic.systemCpuLoad.toFixed(3) + "</div>";
+  } else if (diagnostic.systemCpuLoad > 0.7) {
+    document.getElementById("diagnostic-summary-system-cpu").innerHTML =
+         "<div style=\"font-weight: bold;color:orange\">" + diagnostic.systemCpuLoad.toFixed(3) + "</div>";
+  } else {
+    document.getElementById("diagnostic-summary-system-cpu").innerHTML = diagnostic.systemCpuLoad.toFixed(3);
+  }
+
+  if (diagnostic.processCpuLoad > 0.9) {
+    document.getElementById("diagnostic-summary-process-cpu").innerHTML =
+         "<div style=\"font-weight: bold;color:red\">" + diagnostic.processCpuLoad.toFixed(3)  + "</div>";
+  } else if (diagnostic.processCpuLoad > 0.7) {
+    document.getElementById("diagnostic-summary-process-cpu").innerHTML = 
+         "<div style=\"font-weight: bold;color:orange\">" + diagnostic.processCpuLoad.toFixed(3) + "</div>";
+  } else {
+    document.getElementById("diagnostic-summary-process-cpu").innerHTML = diagnostic.processCpuLoad.toFixed(3);
+  }
+}
+
+function getIOLoad(diagnostic) {
+  let value = '-';
+  if (diagnostic.hasOwnProperty('iowaitPercentage')) {
+     value = diagnostic.iowaitPercentage;
+  }
+  if (value === '-') { 
+      document.getElementById("diagnostic-summary-io-wait").innerHTML = value;
+  }
+
+  if (value > 3.0) {
+     document.getElementById("diagnostic-summary-io-wait").innerHTML =
+       "<div style=\"font-weight: bold;color:red\">" + value + "</div>";
+  } else if (value > 1.0) {
+     document.getElementById("diagnostic-summary-io-wait").innerHTML = 
+       "<div style=\"font-weight: bold;color:orange\">" + value + "</div>"; 
+  } else {
+     document.getElementById("diagnostic-summary-io-wait").innerHTML = value;
+  }
+}
+
+function getMigrationDiagnostic(diagnostic) {
+  if (diagnostic.totalPendingRegions > 1000000) {
+     document.getElementById("diagnostic-summary-pending-region").innerHTML = 
+       "<div style=\"font-weight: bold;color:red\">" + 
+           diagnostic.totalPendingRegions.toLocaleString("en-US") + "</div>";
+  } else if (diagnostic.totalPendingRegions > 500000) {
+     document.getElementById("diagnostic-summary-pending-region").innerHTML = 
+        "<div style=\"font-weight: bold;color:orange\">" +
+                diagnostic.totalPendingRegions.toLocaleString("en-US") + "</div>";;
+  } else {
+     document.getElementById("diagnostic-summary-pending-region").innerHTML = 
+                diagnostic.totalPendingRegions.toLocaleString("en-US");
+  }
+
+  document.getElementById("diagnostic-summary-failed-paths").innerHTML = 
+                diagnostic.totalFailedPaths.toLocaleString("en-US");
+  document.getElementById("diagnostic-summary-total-retries").innerHTML = 
+                diagnostic.totalPathRetryCount.toLocaleString("en-US");
+  if ("migrationPathsRequeued" in diagnostic) {
+     let totalRequeues = 0;
+     for (const key in diagnostic.migrationPathsRequeued) {
+         totalRequeues = totalRequeues + diagnostic.migrationPathsRequeued[key];
+     }
+     document.getElementById("diagnostic-summary-total-requeues").innerHTML = 
+            totalRequeues.toLocaleString("en-US");
+  }
 }
 
 
-const urlParams = new URLSearchParams(window.location.search);
-var pageIndex = urlParams.get('index');
-if (!pageIndex) {
-   pageIndex = -1;
-} else {
-   pageIndex = parseInt(pageIndex);
+function getEventManagerDiagnostic(diagnostic) {
+  document.getElementById("diagnostic-summary-event-queue").innerHTML = 
+         diagnostic.totalQueuedEvents.toLocaleString("en-US");
+  document.getElementById("diagnostic-summary-event-manager-added").innerHTML = 
+         diagnostic.totalEventAdded.toLocaleString("en-US");
+  document.getElementById("diagnostic-summary-event-manager-avg-db").innerHTML = 
+         diagnostic.meanDbTime;
+
+  if (diagnostic.maxDbTime > 500) {
+    document.getElementById("diagnostic-summary-event-manager-max-db").innerHTML = 
+         "<div style=\"font-weight: bold;color:red\">" + diagnostic.maxDbTime + "</div>";
+  } else if (diagnostic.maxDbTime > 200) {
+    document.getElementById("diagnostic-summary-event-manager-max-db").innerHTML = 
+         "<div style=\"font-weight: bold;color:orange\">" + diagnostic.maxDbTime + "</div>";
+  } else {
+    document.getElementById("diagnostic-summary-event-manager-max-db").innerHTML = 
+         diagnostic.maxDbTime;
+  }
 }
-getThroughputChart(pageIndex);
-getDiagnostic(pageIndex)
+
+function getFileTracker(diagnostic) {
+  document.getElementById("diagnostic-summary-active-transfers").innerHTML = 
+         diagnostic.fileTrackers.length;
+  let totalFileTransferSize = 0;
+  let totalBytesTransferred = 0;
+  for (var i = 0; i <  diagnostic.fileTrackers.length; i++) {
+    totalFileTransferSize = totalFileTransferSize + diagnostic.fileTrackers[i].FileLength;
+    totalBytesTransferred = totalBytesTransferred + diagnostic.fileTrackers[i].BytesTransferred;
+  }
+ 
+  if (totalFileTransferSize > 200000000000) { //200GB 
+     document.getElementById("diagnostic-summary-total-size-transfers").innerHTML = 
+         "<div style=\"font-weight: bold;color:red\">" + 
+         humanFileSize(totalBytesTransferred, true) + " / " +
+         humanFileSize(totalFileTransferSize, true) + "</div>";
+  } else if (totalFileTransferSize > 100000000000) { //100GB 
+     document.getElementById("diagnostic-summary-total-size-transfers").innerHTML = 
+         "<div style=\"font-weight: bold;color:orange\">" + 
+         humanFileSize(totalBytesTransferred, true) + " / " +
+         humanFileSize(totalFileTransferSize, true) + "</div>";
+  } else {
+     document.getElementById("diagnostic-summary-total-size-transfers").innerHTML = 
+         humanFileSize(totalBytesTransferred, true) + " / " +
+         humanFileSize(totalFileTransferSize, true);
+  }
+}
+
+function getJvmGcDiagnostic(diagnostic, timeStamp) {
+  document.getElementById("diagnostic-summary-gc-avg-time").innerHTML = 
+          (Math.floor(diagnostic.gcPauseTime/diagnostic.gcCount)).toLocaleString("en-US");
+
+  const gcForPeriod = getGCForTime(timeStamp);
+  if (gcForPeriod === "-") {
+     document.getElementById("diagnostic-summary-gc-time-period").innerHTML = 
+        gcForPeriod;
+  }
+  
+  if (gcForPeriod > 2000) {
+    document.getElementById("diagnostic-summary-gc-time-period").innerHTML = 
+        "<div style=\"font-weight: bold;color:red\">" + gcForPeriod.toLocaleString("en-US") + "</div>";
+  } else if (gcForPeriod > 1000) {
+    document.getElementById("diagnostic-summary-gc-time-period").innerHTML = 
+        "<div style=\"font-weight: bold;color:orange\">" + gcForPeriod.toLocaleString("en-US") + "</div>";
+  } else {
+    document.getElementById("diagnostic-summary-gc-time-period").innerHTML = 
+        gcForPeriod.toLocaleString("en-US");
+  }
+}
+
+function processDiagnostic(json) {
+ let actionTotal = 0;
+ for (let j in json.diagnosticSet.diagnostics) {
+   let diagnostic = json.diagnosticSet.diagnostics[j]
+   switch (diagnostic.type) {
+      case "NetworkStatusDTO":
+         getConnectionDetails(diagnostic);
+         break;
+      case "ThroughputDiagnosticDTO":
+         getThroughPut(diagnostic);
+         break;
+      case "CpuLoadDiagnosticDTO":
+         getCPULoad(diagnostic);
+         break;
+      case "LinuxPressureDiagnosticDTO":
+         getIOLoad(diagnostic);
+         break;
+      case "MigrationDiagnosticDTO":
+         getMigrationDiagnostic(diagnostic);
+         break;
+      case "ActionStoreDiagnosticDTO":
+         // Processed in line here.
+         actionTotal += diagnostic.totalUnExecutedEvents;
+         break;
+      case "EventManagerDiagnosticDTO":
+         getEventManagerDiagnostic(diagnostic);
+         break;
+      case "FileTrackerDiagnosticDTO":
+         getFileTracker(diagnostic);
+         break;
+      case "JvmGcDiagnosticDTO":
+         getJvmGcDiagnostic(diagnostic, json.diagnosticSet.timeStamp);
+         break;
+      default:
+         break;
+   }
+ }
+ 
+ if (actionTotal > 1000000) {
+     document.getElementById("diagnostic-summary-action-queue").innerHTML = 
+       "<div style=\"font-weight: bold;color:red\">" +
+        actionTotal.toLocaleString("en-US") + "</div>";
+ } else if (actionTotal > 500000) {
+     document.getElementById("diagnostic-summary-action-queue").innerHTML = 
+      "<div style=\"font-weight: bold;color:orange\">" +
+        actionTotal.toLocaleString("en-US") + "</div>";
+ } else {
+     document.getElementById("diagnostic-summary-action-queue").innerHTML = 
+        actionTotal.toLocaleString("en-US");
+ }
+}
+
+function clickJump(x) {
+   if (x.id === 'network-throughput-row' || x.id === "file-throughput-row") {
+       window.location.href = getThroughputLink();
+   }
+   if (x.id === 'file-tracker-row') {
+       window.location.href = getFileTrackerLink();
+   }
+   if (x.id === 'migration-row' || x.id === 'migration-failure-row') {
+       window.location.href = getMigrationsLink();
+   }
+   if (x.id === 'filesystem-event-row' || x.id === 'system-row') {
+       window.location.href = getSystemLink();
+   }
+   if (x.id === 'network-status-row') {
+       window.location.href = getNetworkLink();
+   }
+}
+
+
+var previousIndex = -1;
+async function getDiagnostic(index) {
+  try {
+    if (previousIndex === index) {
+       return;
+    }
+    previousIndex = index;
+    let json = await loadDiagnostic(index);
+
+    // Set up all date arrays and maps
+    updateTableDate(toDate(json.diagnosticSet.timeStamp));
+
+    activeFileTrackerPercentiles = getCurrentTransferPercentiles(json.diagnosticSet);
+    buildMigrationIdMap(json.diagnosticSet.diagnostics);
+    processDiagnostic(json);
+    processActiveFileRatePercentiles(activeFileTrackerPercentiles);
+    processActiveFileSizePercentiles(activeFileTrackerPercentiles);
+    processActiveFileLatencyPercentiles(activeFileTrackerPercentiles);
+    processActiveMigrations(activeFileTrackerPercentiles);
+
+    fileTrackerPercentiles = getFileSizePercentiles(json);
+    processFileSizePercentiles(fileTrackerPercentiles);
+
+    fileTrackerRatePercentiles = getFileRatePercentiles(json); 
+    processFileRatePercentiles(fileTrackerRatePercentiles);
+
+    recentMigrations = getRecentMigrations(json.diagnosticSet);
+    processRecentActivityMigrations(recentMigrations); 
+    reWriteLinks();
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+
+
+function getGCForTime(timeStamp) {
+   if (timeStamp in jvmGCTimeMap) {
+      return jvmGCTimeMap[timeStamp];
+   }
+   return "-";
+}
+
+async function getJvmGCTime() {
+  try {
+    let json = await loadReport('jvmGC.gz');
+    let gcTimeForPeriod = json.gcTimeForPeriod;
+    let gcTimes = json.timeStamp;    
+    for (var i = 0; i < gcTimes.length; i++) { 
+       jvmGCTimeMap[gcTimes[i]] = gcTimeForPeriod[i];
+    }
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+
+async function getThroughputChart() {
+  try {
+    let json = await loadReport('throughput.gz');
+    generateDiagnosticTimeSeries(json.timeStamp);
+    // Get the diagnostics asynchronously
+    getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
+    // Generate the slider
+    renderSlider(slider, onSliderUpdate, onSliderChange);    
+    // Draw chart
+    let start = diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start];
+    let middle = diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle];
+    let end = diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]
+    doThroughPutChart(json, start, middle, end);
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+getJvmGCTime();
+getThroughputChart();
+reWriteLinks();
 
 </script>
-
 </body>
 </html>

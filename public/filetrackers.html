@@ -1,103 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>LDM Diagnostics</title>
+<title>LiveData File Transfer Diagnostics</title>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/css/diagnostics.css">
-<script src="/js/chart.min.js"></script>
-<script src="/js/sorttable.js"></script>
-<script src="/js/common.js"></script>
+<link rel="stylesheet" href="css/nouislider.min.css">
+<link rel="stylesheet" href="css/diagnostics.css">
+<script src="js/chart.min.js"></script>
+<script src="js/sorttable.js"></script>
+<script src="js/common.js"></script>
+<script src="js/chartjs-plugin-annotation.min.js"></script>
+<script src="js/nouislider.min.js"></script>
 </head>
 
 <body>
 <!-- Navbar -->
 <div class="topnav">
-    <a id="index-link" href="/">Summary</a>
-    <a href="/throughput.html">Throughput</a>
-    <a id="system-link" href="/system.html">System</a>
-    <a id="network-link" href="/network.html">Network</a>
-    <a id="migrations-link" href="/migrations.html">Migrations</a>
-    <a id="filetracker-link" href="/filetrackers.html">Transfers</a>
+    <a id="index-link", href="index.html">Summary</a>
+    <a id="throughput-link", href="throughput.html">Throughput</a>
+    <a id="system-link" href="system.html">System</a>
+    <a id="network-link" href="network.html">Network</a>
+    <a id="migrations-link" href="migrations.html">Migrations</a>
+    <a id="filetrackers-link" href="filetrackers.html"  style="background-color: #FED8B1;">Transfers</a>
 </div>
 
-<div class="content">
-    <div class="tooltip">
-       <span class="tooltiptext">Click point in graph to display point in time file transfers.</span>
-       <div>
-          <h1>File Transfers Count</h1>
-       </div>
-    </div>
-
+<div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
       <div>
-         <canvas id="FileTrackerChart"></canvas>
+         <canvas id="FileTrackerChart" height="400px"></canvas>
       </div>
-       <div style="text-align:center">
-          <div class="tooltip">
-            <span class="tooltiptext">Move slider to report point in time Diagnostics.</span>
-            <h2 style="text-align:center"><span id="current-timestamp"></span></h2>
-         </div>
-       </div>
-       <div>
-    <div>
-       <table>
-         <tr>
-            <td style="text-align:right"><span id="startDate"></span></td>
-            <td style="width:50%"><input type="range" min=0 max="100" value="100" class="slider" id="myRange"></td>
-            <td style="text-align:left"><span id="endDate"></span></td>
-            <td style="text-align:right">Scale</td>
-            <td style="text-align:right">-</td>
-            <td style="width:10%"><input type="range" min=60 max="1440" value="240" class="slider" id="zoomSlider"></td>
-            <td style="text-align:left">+</td>
-         </tr>
-       </table>
-    </div>
-
-    <div class="tooltip">
-      <span class="tooltiptext">Select row in table to display individual file transfer graph. Transfers that have completed cannot be graphed.</span>
-      <div>
-         <h2><span id="transfer-count"></span> Transfers at <span id="time-of-transfers"><span></h2>
+      <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
+      <div style="text-align:center">
+         <h3><span id="transfer-count"></span><span></h3>
       </div>
-    </div>
-
-    <div>
-       <table id="fileTracker-table"></table>
-    </div>
-</div>
-
-<div class="footer">
-  <p></p>
+      <div style="overflow-x:auto;">
+        <table id="fileTracker-table"></table>
+      </div>
 </div>
 
 <script>
-
-
-var fileTrackerChart;
+// Datasets
 var filetrackerCount;
 var throughout;
-var dates;
-var startIndex = 0;
-var zoomScale = 240;
-function doFileTrackerChart(filetrackers) {
+
+//Charts
+var fileTrackerChart;
+
+// Sliders
+var slider = document.getElementById('slider');
+
+
+function doFileTrackerChart(filetrackers, startIndex, middleIndex, endIndex) {
   filetrackerCount = filetrackers.filetrackerCount;
   throughput = filetrackers.bytesPerSecond.map(toMBSecond)  	
-  dates = filetrackers.timeStamp.map(toDate);
-
-  let endIndex = startIndex + zoomScale;
-  if (endIndex >= dates.length) {
-    endIndex = dates.length;
-  }
 
   fileTrackerChart = new Chart("FileTrackerChart", {
     type: "line",
     data: {
-      labels: dates.slice(startIndex, endIndex),
+      labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
       datasets: [{
         label: "Active File Transfers",
         fill: false,
         lineTension: 0.4,
-        backgroundColor: transparentize(255, 99, 132, 0.5),
-        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
         data: filetrackerCount.slice(startIndex, endIndex),
         yAxisID: 'y',
       },
@@ -112,8 +77,24 @@ function doFileTrackerChart(filetrackers) {
       }]
     },
     options: {
+      onHover: (event, chartElement) => {
+         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+      },
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
+        annotation: {
+          annotations: {
+            line1: {
+              type: 'line',
+              xMin: diagnosticsTimeSeries.middle,
+              xMax: diagnosticsTimeSeries.middle,
+              backgroundColor:  transparentize(255, 68, 51, 0.5),
+              borderColor: 'rgb(255, 68, 51)',
+              borderWidth: 2,
+           }
+         }
+        },
         title: {
           display: true,
           text: "Active File Transfer Count"
@@ -125,6 +106,13 @@ function doFileTrackerChart(filetrackers) {
           title: {
             display: false,
             text: 'Date'
+          },
+          ticks: {
+             autoSkip: true,
+             maxTicksLimit: 20,
+             callback: function(value, index, ticks) {
+                        return this.getLabelForValue(value).slice(0,-3);
+                    }
           }
         },
         y: {
@@ -154,74 +142,42 @@ function doFileTrackerChart(filetrackers) {
   });
 }
 
+function onChartClick(clickedElementindex) {
+   diagnosticsTimeSeries.middle =
+       diagnosticsTimeSeries.dates[
+         diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
+           + clickedElementindex];
+   getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
+   slider.noUiSlider.setHandle(1, diagnosticsTimeSeries.middle, false, false);
+   resetAnnotations();
+   reWriteLinks();
+}
+
 document.getElementById("FileTrackerChart").onclick = function(evt) {
   var activePoint = fileTrackerChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
     var clickedElementindex = activePoint[0].index;
-    getDiagnostic(timeStamps[startIndex + clickedElementindex]);
-    reWriteLinks(timeStamps[startIndex + clickedElementindex]);	  
+    onChartClick(clickedElementindex)
   }
 };
 
 
-function reWriteLinks(index) {
-    document.getElementById('index-link').href = "/?index=" + index;
-    document.getElementById('system-link').href = "/system.html?index=" + index;
-    document.getElementById('migrations-link').href = "/migrations.html?index=" + index;
-    document.getElementById('network-link').href = "/network.html?index=" + index;
-}
 
-var timeStamps;
-async function getFileTrackers(pageIndex) {
-  let url = '/api/filetrackers';
-  try {
-    let res = await fetch(url);
-    let json =  await res.json();
-    timeStamps = json.timeStamp;
-    if (pageIndex > 0 ) {
-       for (let i = 0; i < timeStamps.length; i++) {
-         if (timeStamps[i] === pageIndex) {
-            startIndex = i;
-            break; 
-         }
-       }	       	      
-    }
-    doFileTrackerChart(json);
-    processSlider(json.timeStamp[0], json.timeStamp[json.timeStamp.length - 1], json.timeStamp.length, startIndex);
-    return;
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-var diagnostics;
-async function getDiagnostic(index) {
-  let url = '/api/diagnostic?index=' + index;
-  try {
-    let res = await fetch(url);
-    let json =  await res.json();
-    diagnostics = json;
-    processDiagnostic(json, index);
-    return;
-  } catch (error) {
-    console.log(error);
-  }
-}
 
 function processFileTrackerTable(diagnostic, index) {
-  document.getElementById("time-of-transfers").innerHTML  = new Date(diagnostic.timeStamp).toISOString().slice(0,-5);
-  document.getElementById("transfer-count").innerHTML  = diagnostic.fileTrackers.length;
+  document.getElementById("transfer-count").innerHTML  = diagnostic.fileTrackers.length + " Active File Transfers at " + 
+           new Date(diagnostic.timeStamp).toISOString().slice(0,-5);
   document.getElementById("fileTracker-table").innerHTML = "";
   if (diagnostic.fileTrackers.length == 0 ) {
      return;
   }	
   let latencyAvailable = diagnostic.fileTrackers[0].EventLatency ? true : false;
   let timeStamp = diagnostic.timeStamp;
-  let text = "<tr><th style=\"cursor: pointer;\">Path</th><th style=\"cursor: pointer;\">Start Time</th><th style=\"cursor: pointer;\">Time</th><th style=\"cursor: pointer;\">File Size</th>"
+  let text = "<tr><th style=\"cursor: pointer;\">Path</th><th style=\"cursor: pointer;\">Start Time</th><th style=\"cursor: pointer;\">Time (ms)</th><th style=\"cursor: pointer;\">File Size</th>"
   if (latencyAvailable) {
-     text += "<th style=\"cursor: pointer;\">Latency</th>"
+     text += "<th style=\"cursor: pointer;\">Latency (s)</th>"
   }
   text +=  "<th style=\"cursor: pointer;\">Transferred</th><th style=\"cursor: pointer;\">Attempt</th><th style=\"cursor: pointer;\">Complete</th><th style=\"cursor: pointer;\">Bytes/s</th></tr>";  
   for (let i in diagnostic.fileTrackers) {
@@ -234,21 +190,22 @@ function processFileTrackerTable(diagnostic, index) {
       let endTime = timeStamp > fileTracker.LastUpdate ? timeStamp : fileTracker.LastUpdate;
       time = endTime - fileTracker.StartTime;
     }
-    text += "<tr onclick=\"location.href=\'/transfer.html?index=" + index + "&path=" + encodeURIComponent(fileTracker.Path) + "\';\"  style=\"cursor: pointer;\">"
-    text += "<td>" + fileTracker.Path + "</td><td>" + new Date(fileTracker.StartTime).toISOString()  + "</td><td>" + time  + "</td><td>" + fileTracker.FileLength  +"</td>"
+    text += "<tr onclick=\"location.href=\'" + getFileLink(fileTracker.Path) + "\';\"  style=\"cursor: pointer;\">"
+    text += "<td>" + fileTracker.Path + "</td><td>" + new Date(fileTracker.StartTime).toISOString().slice(0,-5)  + "</td>"
+    text += "<td title=\"" + msToTime(time)  + "\">" + time.toLocaleString("en-US")  + "</td>"
+    text += "<td title=\"" + humanFileSize(fileTracker.FileLength) + "\">" + fileTracker.FileLength.toLocaleString("en-US")  +"</td>"
     if (latencyAvailable) {
-       text += "<td>" + fileTracker.EventLatency  + "</td>"
+       text += "<td title=\"" + secondsToTime(fileTracker.EventLatency)  + "\">" + fileTracker.EventLatency.toLocaleString("en-US")  + "</td>"
     }
-    text += "<td>"+ fileTracker.BytesTransferred  +"</td><td>" + fileTracker.AttemptCount + "</td><td>" + fileTracker.IsComplete  + "</td><td>" + fileTracker.BytesPerSecond + "</td></tr>";
+    text += "<td title=\"" + humanFileSize(fileTracker.BytesTransferred) + "\">"+ fileTracker.BytesTransferred.toLocaleString("en-US")  +"</td>"
+    text += "<td>" + fileTracker.AttemptCount + "</td>"
+    text += "<td>" + fileTracker.IsComplete  + "</td>"
+    text += "<td title=\"" + toMBSecond(fileTracker.BytesPerSecond) + " Mbs\">" + fileTracker.BytesPerSecond.toLocaleString("en-US") + "</td></tr>";
   }
   document.getElementById("fileTracker-table").innerHTML = text;
   var newTableObject = document.getElementById("fileTracker-table");
   sorttable.makeSortable(newTableObject);
 }
-
-
-
-
 
 function processDiagnostic(json, index) {
   for (let j in json.diagnosticSet.diagnostics) {
@@ -261,69 +218,68 @@ function processDiagnostic(json, index) {
 }
 
 
-function processSlider(startDate, endDate, max, index) {
-   let newValue = index > 0 ? index : 0;
-   document.getElementById("myRange").max = max;
-   document.getElementById("myRange").value = newValue;
-   document.getElementById("startDate").innerHTML = new Date(startDate).toISOString();
-   document.getElementById("endDate").innerHTML = new Date(endDate).toISOString();
-   document.getElementById("current-timestamp").innerHTML = new Date(startDate).toISOString();
-}
-
-var slider = document.getElementById("myRange");
-slider.oninput = function() {
-  startIndex = parseInt(this.value);
-  redrawChart();
-  let offset = startIndex + Math.floor(zoomScale/2); 
-  if (offset > timeStamps.length - 1) {
-      if (startIndex < timeStamps.length - 1) {
-        offset = startIndex;
-      } else {
-        offset = timeStamps.length - 1;
-      }
-  }
-  document.getElementById("current-timestamp").innerHTML = new Date(timeStamps[offset]).toISOString();
-}
-slider.onchange = function() {
-  startIndex = parseInt(this.value);
-  let offset = startIndex + Math.floor(zoomScale/2); 
-  if (offset > timeStamps.length - 1) {
-      if (startIndex < timeStamps.length - 1) {
-        offset = startIndex;
-      } else {
-        offset = timeStamps.length - 1;
-      }
-  }
-  document.getElementById("current-timestamp").innerHTML = new Date(timeStamps[offset]).toISOString();
-  getDiagnostic(timeStamps[offset]);
-}
-
-var zoomSlider = document.getElementById("zoomSlider");
-zoomSlider.oninput = function() {
-  zoomScale = parseInt(this.value);
-  redrawChart();
-}
-
-function redrawChart() {
-  let endIndex = startIndex + zoomScale;
-  if (endIndex > dates.length) {
-    endIndex = dates.length;
-  }
-  fileTrackerChart.data.labels = dates.slice(startIndex, endIndex);
-  fileTrackerChart.data.datasets[0].data = filetrackerCount.slice(startIndex, endIndex);  
-  fileTrackerChart.data.datasets[1].data = throughput.slice(startIndex, endIndex);  
+function resetAnnotations() {
+  fileTrackerChart.options.plugins.annotation.annotations.line1.xMin =
+           diagnosticsTimeSeries.middle;
+  fileTrackerChart.options.plugins.annotation.annotations.line1.xMax =
+           diagnosticsTimeSeries.middle;
   fileTrackerChart.update();
 }
 
-const urlParams = new URLSearchParams(window.location.search);
-var pageIndex = urlParams.get('index');
-if (!pageIndex) {
-   pageIndex = -1;	
-} else {
-   pageIndex = parseInt(pageIndex);
+
+function redrawChart() {
+  let startIndex =  diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start);
+  let endIndex = diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.end)
+  
+  fileTrackerChart.data.labels = diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
+  fileTrackerChart.data.datasets[0].data = filetrackerCount.slice(startIndex, endIndex);  
+  fileTrackerChart.data.datasets[1].data = throughput.slice(startIndex, endIndex);  
+  fileTrackerChart.options.plugins.annotation.annotations.line1.xMin =
+           diagnosticsTimeSeries.middle;
+  fileTrackerChart.options.plugins.annotation.annotations.line1.xMax =
+           diagnosticsTimeSeries.middle;
+  fileTrackerChart.update();
 }
-getFileTrackers(pageIndex);
-getDiagnostic(pageIndex);
+
+
+function onSliderUpdate() {
+}
+
+function onSliderChange() {
+   getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
+   redrawChart(); 
+   reWriteLinks();
+}
+
+async function getDiagnostic(index) {
+  try {
+    let json = await loadDiagnostic(index);
+    diagnostics = json;
+    processDiagnostic(json, index);
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+async function getFileTrackers() {
+  try {
+    let json = await loadReport('filetrackers.gz');
+    generateDiagnosticTimeSeries(json.timeStamp);
+    getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
+    doFileTrackerChart(json,
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start], 
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle], 
+       diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]);
+    renderSlider(slider, onSliderUpdate, onSliderChange);
+    reWriteLinks();
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+getFileTrackers();
 
 </script>
 </body>
