@@ -883,13 +883,13 @@ document.getElementById("ThroughPutChart").onclick = function(evt) {
            diagnosticsTimeSeries.dates[
                  diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
                       + clickedElementindex];
-    getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
     throughPutChart.options.plugins.annotation.annotations.line1.xMin = 
            diagnosticsTimeSeries.middle;
     throughPutChart.options.plugins.annotation.annotations.line1.xMax = 
            diagnosticsTimeSeries.middle;
     throughPutChart.update();
     slider.noUiSlider.setHandle(1, diagnosticsTimeSeries.middle, false, false);
+    getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
     reWriteLinks();
   }
 };

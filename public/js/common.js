@@ -420,10 +420,12 @@ function mergeTooltips(slider, threshold, separator) {
 // we may actually remember Ids that are not in the current
 // diagnostic.
 var migrationIdMap = {}
+var migrationNameMap = {}
 function buildMigrationIdMap(diagnostics) {
   for (let i in diagnostics) {
       if (diagnostics[i].type === 'ActionStoreDiagnosticDTO') {
-          migrationIdMap[diagnostics[i].id] = diagnostics[i].migrationId
+          migrationIdMap[diagnostics[i].id] = diagnostics[i].migrationId;
+          migrationNameMap[diagnostics[i].migrationId] = diagnostics[i].id;
       }
   }
 }

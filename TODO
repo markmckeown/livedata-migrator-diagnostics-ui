@@ -1,16 +1,64 @@
-* Input field for a date/time. Consume text in different formats and map to timestamp, go to closes timestamp in the data set.
+* Input field for a date/time. Consume text in different formats and 
+map to timestamp, go to closest timestamp in the data set.
 
-* Diagnostics for Event RPC from NN not plotted. Tells health of HDFS cluster.
+* Diagnostics for Event RPC from NaneNode not plotted. 
+Tells health and load of HDFS cluster - should be on system page.
 
-* "Capture time" on transfer page is confusing.
+* "Capture time" on transfer page is confusing. The last write
+time can be later than capture time - the capture time is when 
+the diagnostic capture was started, but last write can be later.
 
-*  Latencies hard to read on transfer page - have transition diagram with times between transitions.
+*  Latencies hard to read on transfer page - have a timeline
+diagram that covers the stages: source event creation, action
+queued, transfer started etc. This can have the deltas between
+the stages.
 
-* Failures, Retries Pending Regions etc graphs can be order of millions - changes of 100K can be hard to see in graph. Provide log option.
+* Failures, Retries Pending Regions etc graphs can be order of 
+millions - changes of 100K can be hard to see in graph. 
+Provide log option.
 
-* Graph is slow for long time sets.
+* Scrolling slider and looking at graphs can be hard as they 
+do not always fit on page, particularly when there are multiple graphs.
+Options include making graphs smaller (makes them hard to read), have
+multiple sliders with one per graph that are linked together, floating
+slider.
 
-* Scrolling slider and looking at graphs can be hard as they do not always fit on page - float the slider to always appear on page? (Mulitple sliders was a PITA).
+* Provide some delta's on the diagnostics page. When total events can 
+be 150M, the delta from the previous diagnostics would be more useful.
+This includes actions etc, it would be interesting to know if actions 
+are going up or down on the diagnostic page. When generating the time
+series in the Python script we can create a delta time series - these
+could also be plotted, independently or as overlays on existing graphs.
+These could be displayed in table as 50/1,500,00 - indicating the change
+was 50 over a total of 1.5M.
 
-* Provide some delta's on the diagnostics page - change in retries over period etc.
+* Orange on Navigation bar clashes with graphs - use a darker orange.
+
+* Per file transfer page can show stalls but it is hard to map 
+back to the system as timestamps might not match. The per file transfer page
+is at second granularity. However, it should be possible to map to the nearest
+diagnostic. 
+
+* Per file transfer page uses old slider, should switch to new slider as
+the old one is hard to understand and use.
+
+* For tables that have been sorted if you move the slider to point in 
+graph to load new data into table the sorting is lost. The sorted tables
+are done with sorttable (https://www.kryogenix.org/code/browser/sorttable/)
+which is easy to use but has limitations. If moving to a different approach
+(https://www.w3schools.com/howto/howto_js_sort_table.asp) would also allow
+support of units (eg display in KiB, MiB, GiB).
+
+* Primary reference for a migration should be the migration name, as is
+currently the case, but it should be possible to map back to the
+internal migration id. This is useful as if an issue is identified with a 
+migration then the next step would be to look to the relevant log file - which
+is based on migration id. To avoid bloating tables should have collapsible 
+columns.
+
+* Recent activity chart at bottom of the summary page should have the 
+the migration name as key - currently you have to mouse over to get the
+migration name. The chart only uses half the page so there should be room.
+
+
 

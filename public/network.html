@@ -75,8 +75,8 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
         label: "OS Tx Buffer Size",
         fill: false,
         lineTension: 0.4,
-        backgroundColor: transparentize(255, 165, 0, 0.5),
-        borderColor: 'rgb(255,165,0)',
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
         data: tx.slice(startIndex, endIndex),
         yAxisID: 'y'
       },
@@ -85,8 +85,8 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
         fill: false,
 	display: true,
         lineTension: 0.4,
-        backgroundColor:  transparentize(54, 162, 235, 0.5),
-        borderColor: 'rgb(54, 162, 235)',
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
         data: bytesPerSecond.slice(startIndex, endIndex),
         yAxisID: 'y1',
       }]
@@ -167,8 +167,8 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
         label: "OS Rx Buffer Size",
         fill: false,
         lineTension: 0.4,
-        backgroundColor: transparentize(255, 165, 0, 0.5),
-        borderColor: 'rgb(255,165,0)',
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
         data: rx.slice(startIndex, endIndex),
       },
       {
@@ -176,8 +176,8 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
         fill: false,
 	display: false,
         lineTension: 0.4,
-        backgroundColor:  transparentize(54, 162, 235, 0.5),
-        borderColor: 'rgb(54, 162, 235)',
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
         data: bytesPerSecond.slice(startIndex, endIndex),
         yAxisID: 'y1',
       }]
@@ -257,8 +257,8 @@ function doConnectionCountChart(networkStatus, startIndex, middleIndex, endIndex
         label: "Connection Count",
         fill: false,
         lineTension: 0.4,
-        backgroundColor: transparentize(255, 165, 0, 0.5),
-        borderColor: 'rgb(255,165,0)',
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
         data: count.slice(startIndex, endIndex),
       },
       {
@@ -266,8 +266,8 @@ function doConnectionCountChart(networkStatus, startIndex, middleIndex, endIndex
         fill: false,
 	display: false,
         lineTension: 0.4,
-        backgroundColor:  transparentize(54, 162, 235, 0.5),
-        borderColor: 'rgb(54, 162, 235)',
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
         data: bytesPerSecond.slice(startIndex, endIndex),
         yAxisID: 'y1',
       }]
@@ -348,8 +348,8 @@ function doConnectionRetransmitChart(networkStatus, startIndex, middleIndex, end
         label: "Retransmit Count",
         fill: false,
         lineTension: 0.4,
-        backgroundColor: transparentize(255, 165, 0, 0.5),
-        borderColor: 'rgb(255,165,0)',
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
         data: retrnsmt.slice(startIndex, endIndex),
       },
       {
@@ -357,9 +357,9 @@ function doConnectionRetransmitChart(networkStatus, startIndex, middleIndex, end
         fill: false,
 	display: false,
         lineTension: 0.4,
-        backgroundColor:  transparentize(54, 162, 235, 0.5),
-        borderColor: 'rgb(54, 162, 235)',
         data: bytesPerSecond.slice(startIndex, endIndex),
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
         yAxisID: 'y1',
       }]
     },
@@ -474,9 +474,9 @@ function onSliderUpdate() {
 }
 
 function onSliderChange() {
-   getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
    redrawChart(); 
    reWriteLinks();
+   getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
 }
 
 function onChartClick(clickedElementindex) {
@@ -484,10 +484,10 @@ function onChartClick(clickedElementindex) {
        diagnosticsTimeSeries.dates[
          diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
            + clickedElementindex];
-   getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
    resetAnnotations();
    slider.noUiSlider.setHandle(1, diagnosticsTimeSeries.middle, false, false);
    reWriteLinks();
+   getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
 }
 
 

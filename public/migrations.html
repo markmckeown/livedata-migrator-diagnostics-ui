@@ -41,12 +41,12 @@
    </div>
    <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
    <div style="text-align:center;">
-       <h3>Migrations at <span id="time-of-diagnostic"></span></h3>
+       <h3><span id="migration-count"></span></h3>
    </div>
-   <div>
+   <div style="margin-left:100px;margin-top:20px;margin-bottom:20px;margin-right:100px">
        <table id="migration-state-table"></table>
    </div>
-   <div>
+   <div style="overflow-x:auto;">
       <table id="migration-table"></table>
    </div>
 </div>
@@ -425,21 +425,28 @@ function onChartClick(clickedElementindex) {
 }
 
 function buildMigrationTable(mapPendingRegions, mapEvents, mapActions, mapFailedPaths, mapRetries, mapRecentActivity) {
-  let text = '<tr><th style="cursor: pointer;">Migration</th><th style="cursor: pointer;">Pending Regions</th><th style="cursor: pointer;">Actions</th>';
+  let text = '<tr><th style="cursor: pointer;">Migration</th><th style="cursor: pointer;">Id</th><th style="cursor: pointer;">Pending Regions</th><th style="cursor: pointer;">Actions</th>';
   text += '<th style="cursor: pointer;">Recent Actvity</th>';
   if (mapEvents) {
      text += '<th style="cursor: pointer;">Queued Events</th>';
   }
   text += '<th style="cursor: pointer;">Failed Paths</th><th style="cursor: pointer;">Retries</th></tr>';  
+  let count = 0;
   for (const migration of mapPendingRegions.keys()) {
+    count++;
     let actions = mapActions.has(migration) ? mapActions.get(migration) : 0;
     let recentActivity = mapRecentActivity.has(migration) ? mapRecentActivity.get(migration) : 0;
     let eventCount = 0
     if (mapEvents) {
        eventCount = mapEvents.has(migration) ? mapEvents.get(migration) : 0;
     } 
+    let id = migrationNameMap[migration];
+    if (typeof id === 'undefined') {
+       id = '-';
+    } 
     text += "<tr onclick=\"location.href=\'" + getMigrationLink(migration) + "\';\"  style=\"cursor: pointer;\">" + 
             "<td>" + migration + 
+            "</td><td>" + id +
             "</td><td>" + mapPendingRegions.get(migration).toLocaleString("en-US") +
             "</td><td>" + actions.toLocaleString("en-US") +
             "</td><td>" + recentActivity.toLocaleString("en-US");
@@ -453,6 +460,7 @@ function buildMigrationTable(mapPendingRegions, mapEvents, mapActions, mapFailed
   document.getElementById("migration-table").innerHTML = text;
   var newTableObject = document.getElementById("migration-table");
   sorttable.makeSortable(newTableObject);
+  return count;
 }
 
 function buildMigrationStateTable(diagnostic) { 
@@ -524,8 +532,9 @@ function processDiagnostic(json) {
        mapActions.set(diagnostic.migrationId, diagnostic.totalUnExecutedEvents);
      }
   }
-  buildMigrationTable(mapPendingRegions, mapEvents, mapActions, mapFailedPaths, mapRetries, mapRecentActivity);
-  document.getElementById("time-of-diagnostic").innerHTML = 
+  let migrationCount = buildMigrationTable(mapPendingRegions, mapEvents, mapActions, mapFailedPaths, mapRetries, mapRecentActivity);
+  document.getElementById("migration-count").innerHTML = 
+          migrationCount + " Migrations at " +
                    new Date(json.diagnosticSet.timeStamp).toISOString().slice(0,-5);
   return;
 }
@@ -602,8 +611,8 @@ function onSliderUpdate() {
 }
 
 function onSliderChange() {
-   getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
    redrawChart(); 
+   getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
    reWriteLinks();
 }
 
@@ -635,7 +644,6 @@ async function getQueues() {
     let json = await loadReport('queues.gz');
     generateDiagnosticTimeSeries(json.timeStamp);
     getFailedPaths();
-    getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
     doPendingRegionChart(json,
        diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start], 
        diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle], 
@@ -649,6 +657,7 @@ async function getQueues() {
        diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle], 
        diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]);
     renderSlider(slider, onSliderUpdate, onSliderChange);
+    getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
     reWriteLinks();
     return;
   } catch (error) {

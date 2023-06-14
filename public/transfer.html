@@ -40,7 +40,7 @@
         <canvas id="FileTransferChart" height="400px"></canvas>
       </p>	
     </div>
-    <div id='chart-slider-container' class='chart-slider-container-grid' >
+    <div id='chart-slider-container' style="margin-top:10px;margin-bottom:10px;" class='chart-slider-container-grid' >
       <div style="text-align:right">
           <span id='range-start'></span>
       </div>
@@ -118,32 +118,44 @@ function processTransferTable(fileTracker, diagnosticTimeStamp, migrationName) {
   text += "<td>Migration</td><td>" + migrationName + " (" + migrationId + ")</td></tr>";
   text += "<tr><td title=\"File will be transferred either due to the initial migration root scan or due to client activity after the initial scan.\">Activity Type</td>";
   text += "<td>" + transferType + "</td></tr>"; 	
+  let total_delta = 0;
   let sourceEventCreationTimeStamp = fileTracker.SourceEventCreationTimeStamp ? true : false;
   if (sourceEventCreationTimeStamp) {
-     text += "<tr><td title=\"Filesystem Event or Scan Queued Time.\">Source Event Creation Time</td><td align =\"left\">" + new Date(fileTracker.SourceEventCreationTimeStamp).toISOString() + "</td></tr>";	
+     text += "<tr><td title=\"Filesystem Event or Scan Queued Time.\">Source Event Creation Time</td><td>" + new Date(fileTracker.SourceEventCreationTimeStamp).toISOString() + "   (" + msToTime(0)  + ")   (" + msToTime(total_delta)  + ")</td></tr>";	
   }
   let ldmEventCreationTimeStamp = fileTracker.LdmEventCreationTimeStamp ? true : false;
   if (ldmEventCreationTimeStamp) {
      let tableEntry;
      if (sourceEventCreationTimeStamp) {
        let delta = fileTracker.LdmEventCreationTimeStamp - fileTracker.SourceEventCreationTimeStamp;
-       tableEntry = new Date(fileTracker.LdmEventCreationTimeStamp).toISOString() + "  (" + msToTime(delta)  + ")";
+       total_delta = total_delta + delta;
+       tableEntry = new Date(fileTracker.LdmEventCreationTimeStamp).toISOString() + "  (" + msToTime(delta)  
+                 + ")   (" + msToTime(total_delta) + ")";
      } else {
        tableEntry = new Date(fileTracker.LdmEventCreationTimeStamp).toISOString()
      }
-     text += "<tr><td title=\"LiveData Migrator Action Queued Time.\">Action Queued Time</td><td align=\"left\">" + tableEntry + "</td></tr>";	
-     text += "<tr><td>Start Time</td><td align=\"left\">" + new Date(fileTracker.StartTime).toISOString() + "  (" + msToTime(fileTracker.StartTime - fileTracker.LdmEventCreationTimeStamp) + ")</td></tr>";
+     text += "<tr><td title=\"LiveData Migrator Action Queued Time.\">Action Queued Time</td><td>" + tableEntry + "</td></tr>";	
+     let delta = fileTracker.StartTime - fileTracker.LdmEventCreationTimeStamp;
+     total_delta = total_delta + delta;
+     text += "<tr><td>Transfer Start Time</td><td>" + new Date(fileTracker.StartTime).toISOString() 
+         + "  (" + msToTime(delta) + ")   (" + msToTime(total_delta)  + ")</td></tr>";
   } else {
-     text += "<tr><td>Start Time</td><td align=\"left\">" + new Date(fileTracker.StartTime).toISOString() + "</td></tr>";
+     text += "<tr><td>Start Time</td><td>" + new Date(fileTracker.StartTime).toISOString() + "</td></tr>";
   }
-  text += "<tr><td>Time of Last Write</td><td align=\"left\">" + new Date(lastUpdate).toISOString() + "  (" +  msToTime(lastUpdate - fileTracker.StartTime)   +")</td></tr>";	
+  let delta = lastUpdate - fileTracker.StartTime;
+  total_delta = total_delta + delta;
+  text += "<tr><td>Time of Last Write for Transfer</td><td>" + new Date(lastUpdate).toISOString() 
+       + "  (" +  msToTime(delta) + ")   (" + msToTime(total_delta)   +")</td></tr>";	
   let captureTime = diagnosticTimeStamp;
   if (captureTime < lastUpdate) {
      captureTime = lastUpdate;
   }
-  text += "<tr><td>Capture Time</td><td align=\"left\">" + new Date(captureTime).toISOString() + "  (" + msToTime(captureTime - lastUpdate)  +")</td></tr>";
+  delta = captureTime - lastUpdate;
+  total_delta = total_delta + delta;
+  text += "<tr><td>Capture Time</td><td>" + new Date(captureTime).toISOString() 
+       + "  (" +  msToTime(delta) + ")   (" + msToTime(total_delta)   +")</td></tr>";	
   if (fileTracker.IsComplete) {
-    text += "<tr><td>Completed Time</td><td align=\"left\">" 
+    text += "<tr><td>Transfer Completed Time</td><td>" 
      + new Date(fileTracker.CompleteTime).toISOString() + " (" + msToTime(transferTime) + ")</td></tr>";
   } else {
     text += "<tr><td>Completed Time</td><td>-</td></tr>";
@@ -275,8 +287,8 @@ function plotFileTransferGraph(fileTracker, seconds, bytesForSecond) {
         label: "Bytes Per Second",
         fill: false,
         lineTension: 0.4,
-        backgroundColor: transparentize(255, 165, 0, 0.5),
-        borderColor: 'rgb(255,165,0)',
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
         data: transferRate.slice(startIndex, endIndex),
         yAxisID: 'y'
       },
@@ -284,8 +296,8 @@ function plotFileTransferGraph(fileTracker, seconds, bytesForSecond) {
         label: "Mbit/s",
         fill: false,
         lineTension: 0.4,
-        backgroundColor:  transparentize(54, 162, 235, 0.5),
-        borderColor: 'rgb(54, 162, 235)',
+        backgroundColor: transparentize(255, 165, 0, 0.5),
+        borderColor: 'rgb(255,165,0)',
         data: mibPerS.slice(startIndex, endIndex),
         yAxisID: 'y1',
       }]
