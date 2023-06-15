@@ -56,9 +56,5 @@ migration then the next step would be to look to the relevant log file - which
 is based on migration id. To avoid bloating tables should have collapsible 
 columns.
 
-* Recent activity chart at bottom of the summary page should have the 
-the migration name as key - currently you have to mouse over to get the
-migration name. The chart only uses half the page so there should be room.
-
 
 

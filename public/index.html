@@ -46,6 +46,8 @@
              <td><span id="diagnostic-summary-table-rate-per-second">-</span></td>
              <td title="Average for period / Peak for period">Bytes Per Second</td>
              <td><span id="diagnostic-summary-table-bytes-per-second">-</span></td>
+         </tr>
+      </table>
       <table id="diagnostic-summary-table-12" style="margin-top:10px">   
          <tr id="file-throughput-row" onclick="clickJump(this)" style="cursor: pointer;">
              <th width="250px" >File Throughput</th>
@@ -112,7 +114,7 @@
       </table>
       <table id="diagnostic-summary-table-3" style="margin-top:10px; margin-bottom:10px">   
          <tr id="system-row" onclick="clickJump(this)" style="cursor: pointer;">
-             <th width="250px" >System</td>
+             <th width="250px" >System</th>
              <td title="Amount of time the CPU is busy across all processes on the syste. 1.0 means 100% of the time.">System CPU</td>
              <td><span id="diagnostic-summary-system-cpu">-</span></td>
              <td title="Amount of CPU time devoted to application. 1.0 means 100% of the time. If this matches System CPU time then application is the main user of CPU resources.">Process CPU</td>
@@ -150,10 +152,12 @@
         <canvas id="FileSizePercentiles"></canvas>
         <form action=""><input type="button" style="display: block; margin: auto;" id="FileSizePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
       </div>
-      <div>
-        <canvas id="RecentMigrations" ></canvas>
-         <form action=""><input type="button" style="display: block; margin: auto;" id="RecentMigrationsButton", onclick="changeScaleButton(this);", value="log"></button></form>
-      </div>
+   </div>
+   <div>
+      <canvas id="RecentMigrations" height="600"></canvas>
+   </div>
+   <div>
+      <form action=""><input type="button" style="display: block; margin: auto;" id="RecentMigrationsButton", onclick="changeScaleButton(this);", value="log"></button></form>
    </div>
 
 <!-- !PAGE CONTENT! -->
@@ -386,6 +390,7 @@ function processRecentActivityMigrations(recentMigrations) {
   options: {
     indexAxis: 'y',
     responsive: true,
+    maintainAspectRatio: false,
     onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
     },
@@ -395,7 +400,7 @@ function processRecentActivityMigrations(recentMigrations) {
         type: scaleType,
       },
       y : {
-         display: false,
+         display: true,
       }
     },
     plugins: {
