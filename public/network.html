@@ -21,6 +21,7 @@
     <a id="system-link" href="system.html">System</a>
     <a id="network-link" href="network.html" style="background-color: #FED8B1;">Network</a>
     <a id="migrations-link" href="migrations.html">Migrations</a>
+    <a id="eventstream-link" href="eventstream.html">Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
 </div>
 
@@ -113,6 +114,22 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
         title: {
           display: true,
           text: "OS Total Connection Tx Buffer Sizes"
+        },
+        tooltip: {
+           callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+
+              if (context.parsed.y !== null) {
+                if (label === "OS Tx Buffer Size") {
+                  label = label + ' ' + humanFileSize(context.parsed.y);
+                } else {
+                  label = label + ' ' + context.parsed.y;
+                }
+              }
+              return label;
+            },
+          }
         }
       },
       scales: {
@@ -134,6 +151,11 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
           display: true,
           type: 'linear',
           min: 0.0,
+          ticks: {
+                    callback: function(value, index, ticks) {
+                        return humanFileSize(value);
+                    }
+           },
           title: {
             display: true,
             text: 'Tx Buffer Size'
@@ -204,6 +226,22 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
         title: {
           display: true,
           text: "OS Total Connection Rx Buffer Sizes"
+        },
+        tooltip: {
+           callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+
+              if (context.parsed.y !== null) {
+                if (label === "OS Rx Buffer Size") {
+                  label = label + ' ' + humanFileSize(context.parsed.y);
+                } else {
+                  label = label + ' ' + context.parsed.y;
+                }
+              }
+              return label;
+            },
+          }
         }
       },
       scales: {
@@ -225,6 +263,11 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
           display: true,
           type: 'linear',
           min: 0.0,
+          ticks: {
+                    callback: function(value, index, ticks) {
+                        return humanFileSize(value);
+                    }
+           },
           title: {
             display: true,
             text: 'Rx Buffer Size'

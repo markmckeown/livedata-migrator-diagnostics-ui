@@ -31,26 +31,15 @@
     <a id="system-link" href="system.html">System</a>
     <a id="network-link" href="network.html">Network</a>
     <a id="migrations-link" href="migrations.html">Migrations</a>
+    <a id="eventstream-link" href="eventstream.html">Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
 </div>
 
 <div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
     <div id='chart-container'>
-      <p>	    
-        <canvas id="FileTransferChart" height="400px"></canvas>
-      </p>	
+       <canvas id="FileTransferChart" height="400px"></canvas>
     </div>
-    <div id='chart-slider-container' style="margin-top:10px;margin-bottom:10px;" class='chart-slider-container-grid' >
-      <div style="text-align:right">
-          <span id='range-start'></span>
-      </div>
-      <div>
-          <input type="range" min=0 max="100" value="0" class="slider" id="myRange">
-      </div>
-      <div>
-          <span id='range-end'></span>
-      </div>
-    </div>	    
+    <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="transfer-slider"></div>
     <div>
        <table id="transfer-table"></table>
     </div>
@@ -62,21 +51,73 @@ var dates;
 var mibPerS;
 var transferRate;
 var filePath;
-var pageIndex;
-var startIndex = 0;
-var zoomScale = 300;
 var baseQuery;
 
 //Charts
 var fileTransferChart;
+
+// Slider
+var slider = document.getElementById('transfer-slider');
+
+function renderTransferSlider(begin, end) {
+   var format = {
+      to: function(value) {
+        let result =  dates[Math.round(value)];
+        return result;
+      },
+      from: function (value) {
+        let result = dates.indexOf(value);
+        return result;
+      }
+   };
+
+   noUiSlider.create(slider, {
+      start: [dates[begin], dates[end]],
+      connect: [false, true, false],
+      behaviour: 'drag-all-tap',
+      tooltips: true,
+      step: 1,
+      range: { 
+          min: 0, 
+          max: dates.length - 1 
+      },
+      format: format,
+      pips: {
+         mode: 'range',
+         density: 4,
+         format: format,
+      }
+    });
+
+    slider.noUiSlider.on('update', function () {
+        let values = slider.noUiSlider.get();
+        let newStart = values[0];
+        let newEnd  = values[1];
+        redrawChart(dates.indexOf(newStart), dates.indexOf(newEnd));
+    });
+
+    slider.noUiSlider.on('change', function () {
+        let values = slider.noUiSlider.get();
+        let newStart = values[0];
+        let newEnd  = values[1];
+        redrawChart(dates.indexOf(newStart), dates.indexOf(newEnd));
+    });
+
+    var connect = slider.querySelectorAll('.noUi-connect');
+    connect[0].classList.add('c-1-color');
+    mergeTooltips(slider, 40, ' - ');
+    return;
+}
+
+
 
 async function getDiagnostic(index, path) {
   try {
     let json = await loadDiagnostic(index);
     let {fileTracker, diagnosticTimeStamp}  = processDiagnostic(json, path);
     let migrationName = getMigrationName(fileTracker, json.diagnosticSet.diagnostics);	  
-    processTransferTable(fileTracker, diagnosticTimeStamp, migrationName);	  
     processDiagnosticForFileTransfer(fileTracker, diagnosticTimeStamp);	  
+    processTransferTable(fileTracker, diagnosticTimeStamp, migrationName);	  
     return;
   } catch (error) {
     console.log(error);
@@ -102,26 +143,33 @@ function getMigrationName(fileTracker, diagnostics) {
 function processTransferTable(fileTracker, diagnosticTimeStamp, migrationName) {
   let percentageDone = Math.floor((fileTracker.BytesTransferred * 100)/fileTracker.FileLength);
   let endTime;
+  // Reset LastUpdate if it is zero, no writes yet.
+  let lastUpdate = fileTracker.LastUpdate;
+  if (lastUpdate === 0) {
+     lastUpdate = fileTracker.StartTime;
+  }
+
   if (fileTracker.IsComplete) {
      endTime = fileTracker.CompleteTime
   } else {
-     endTime = diagnosticTimeStamp > fileTracker.lastUpdate ? diagnosticTimeStamp : fileTracker.LastUpdate;	  
+     // lastUpdate can be after diagnosticTimeStamp, there is a race when they are collected.
+     endTime = diagnosticTimeStamp > lastUpdate ? diagnosticTimeStamp : lastUpdate;	  
   }
   let transferTime = endTime - fileTracker.StartTime;	
-  let lastUpdate = fileTracker.LastUpdate;
+
   let transferType = fileTracker.StatsType;	
   let migrationId = fileTracker.MigrationId;	
 
   let text = "<table>";
-  text += "<tr><td>Path</td><td>" + fileTracker.Path + "</td></tr>";	
+  text += "<tr><th>Path</th><td>" + fileTracker.Path + "</td></tr>";	
   text += "<tr onclick=\"location.href=\'" + localGetMigrationLink(migrationName) + "\';\"  style=\"cursor: pointer;\">";
-  text += "<td>Migration</td><td>" + migrationName + " (" + migrationId + ")</td></tr>";
-  text += "<tr><td title=\"File will be transferred either due to the initial migration root scan or due to client activity after the initial scan.\">Activity Type</td>";
+  text += "<th>Migration</th><td>" + migrationName + " (" + migrationId + ")</td></tr>";
+  text += "<tr><th title=\"File will be transferred either due to the initial migration root scan or due to client activity after the initial scan.\">Activity Type</th>";
   text += "<td>" + transferType + "</td></tr>"; 	
   let total_delta = 0;
   let sourceEventCreationTimeStamp = fileTracker.SourceEventCreationTimeStamp ? true : false;
   if (sourceEventCreationTimeStamp) {
-     text += "<tr><td title=\"Filesystem Event or Scan Queued Time.\">Source Event Creation Time</td><td>" + new Date(fileTracker.SourceEventCreationTimeStamp).toISOString() + "   (" + msToTime(0)  + ")   (" + msToTime(total_delta)  + ")</td></tr>";	
+     text += "<tr><th title=\"Filesystem Event or Scan Queued Time.\">Source Event Creation Time</th><td>" + new Date(fileTracker.SourceEventCreationTimeStamp).toISOString() + "   (" + msToTime(0)  + ")   (" + msToTime(total_delta)  + ")</td></tr>";	
   }
   let ldmEventCreationTimeStamp = fileTracker.LdmEventCreationTimeStamp ? true : false;
   if (ldmEventCreationTimeStamp) {
@@ -134,17 +182,17 @@ function processTransferTable(fileTracker, diagnosticTimeStamp, migrationName) {
      } else {
        tableEntry = new Date(fileTracker.LdmEventCreationTimeStamp).toISOString()
      }
-     text += "<tr><td title=\"LiveData Migrator Action Queued Time.\">Action Queued Time</td><td>" + tableEntry + "</td></tr>";	
+     text += "<tr><th title=\"LiveData Migrator Action Queued Time.\">Action Queued Time</th><td>" + tableEntry + "</td></tr>";	
      let delta = fileTracker.StartTime - fileTracker.LdmEventCreationTimeStamp;
      total_delta = total_delta + delta;
-     text += "<tr><td>Transfer Start Time</td><td>" + new Date(fileTracker.StartTime).toISOString() 
+     text += "<tr><th>Transfer Start Time</th><td>" + new Date(fileTracker.StartTime).toISOString() 
          + "  (" + msToTime(delta) + ")   (" + msToTime(total_delta)  + ")</td></tr>";
   } else {
-     text += "<tr><td>Start Time</td><td>" + new Date(fileTracker.StartTime).toISOString() + "</td></tr>";
+     text += "<tr><th>Transfer Start Time</th><td>" + new Date(fileTracker.StartTime).toISOString() + "</td></tr>";
   }
   let delta = lastUpdate - fileTracker.StartTime;
   total_delta = total_delta + delta;
-  text += "<tr><td>Time of Last Write for Transfer</td><td>" + new Date(lastUpdate).toISOString() 
+  text += "<tr><th title=\"Time of last recorded completed write.\">Time of Last Write</th><td>" + new Date(lastUpdate).toISOString() 
        + "  (" +  msToTime(delta) + ")   (" + msToTime(total_delta)   +")</td></tr>";	
   let captureTime = diagnosticTimeStamp;
   if (captureTime < lastUpdate) {
@@ -152,23 +200,24 @@ function processTransferTable(fileTracker, diagnosticTimeStamp, migrationName) {
   }
   delta = captureTime - lastUpdate;
   total_delta = total_delta + delta;
-  text += "<tr><td>Capture Time</td><td>" + new Date(captureTime).toISOString() 
+  text += "<tr><th title=\"Time diagnostic was captured at. If there is a significant time between last write and capture time then the transfer may have stalled. If all bytes have been written but the transfer is not complete then the process is waiting for the close to complete.\">Capture Time</th><td>" + new Date(captureTime).toISOString() 
        + "  (" +  msToTime(delta) + ")   (" + msToTime(total_delta)   +")</td></tr>";	
   if (fileTracker.IsComplete) {
-    text += "<tr><td>Transfer Completed Time</td><td>" 
+    text += "<tr><th>Transfer Completed Time</th><td>" 
      + new Date(fileTracker.CompleteTime).toISOString() + " (" + msToTime(transferTime) + ")</td></tr>";
   } else {
-    text += "<tr><td>Completed Time</td><td>-</td></tr>";
+    text += "<tr><th>Transfer Completed Time</th><td>-</td></tr>";
   }	
-  text += "<tr><td>Time Transferring</td><td>" + msToTime(transferTime)  + "</td></tr>"	
+  text += "<tr><th title=\"Total time spent transferring the file since the transfer started.\">Time Transferring</th><td>" + msToTime(transferTime)  + "</td></tr>"	
   let latencyAvailable = fileTracker.EventLatency ? true : false;
   if (latencyAvailable) {
-     text += "<tr><td>Migration Latency</td><td>" + secondsToTime(fileTracker.EventLatency) + "</td></tr>";	
+     text += "<tr><th title=\"The total time since the original event that ultimately triggered this file being transferred occured. This could be the time the client event occured on the source filesystem.\">Migration Latency</th><td>" + secondsToTime(fileTracker.EventLatency) + ".000" + "</td></tr>";	
   }
-  text += "<tr><td>Transferred Bytes / File Size</td><td>" + humanFileSize(fileTracker.BytesTransferred, true) + 
+  text += "<tr><th>Transferred Bytes / File Size</th><td>" + humanFileSize(fileTracker.BytesTransferred, true) + 
            " / " + humanFileSize(fileTracker.FileLength, true) + " ("  + percentageDone  + "%)</td></tr>";	
-  text += "<tr><td>Average Transfer Rate</td><td>" + Math.floor(toMBSecond(fileTracker.BytesPerSecond)) + " Mbit/s</td></tr>";	
-  text += "<tr><td title=\"There may be more than one attempt to transfer the file if there was a previous failure transferring it.\">Transfer Attempts</td><td>" + fileTracker.AttemptCount + "</td></tr>";	
+  let maxMbitSecond = mibPerS.reduce((a, b) => Math.max(a, b), -Infinity);
+  text += "<tr><th>Average Transfer Rate (Max)</th><td>" + Math.floor(toMBSecond(fileTracker.BytesPerSecond)) + " Mbit/s (" +   maxMbitSecond   + " Mbit/s)</td></tr>";	
+  text += "<tr><th title=\"There may be more than one attempt to transfer the file if there was a previous failure transferring it.\">Transfer Attempts</th><td>" + fileTracker.AttemptCount + "</td></tr>";	
   text += "</table>";	
   document.getElementById("transfer-table").innerHTML = text;
 }
@@ -213,7 +262,8 @@ function processDiagnosticForFileTransfer(fileTracker, diagnosticTimeStamp) {
     }
     seconds.push(endTime);
     bytesForSecond.push(fileTracker.BytesTransferred);
-    plotFileTransferGraph(fileTracker, seconds, bytesForSecond);
+    dates = seconds.map(toDate);
+    plotFileTransferGraph(fileTracker, seconds, bytesForSecond, 0, seconds.length - 1);
     return;
   }
 
@@ -232,27 +282,30 @@ function processDiagnosticForFileTransfer(fileTracker, diagnosticTimeStamp) {
     }
     seconds.push(i * 1000);
   }
+  dates = seconds.map(toDate);
   
-  plotFileTransferGraph(fileTracker, seconds, bytesForSecond);
+  // Need startIndex and endIndex
+  let startIndex = 0;
+  let endIndex = 0;
+  if (seconds.length <= 360) {
+    endIndex = dates.length;     
+    // No Slider
+  } else {
+    endIndex = 360; 
+  } 
+
+  plotFileTransferGraph(fileTracker, seconds, bytesForSecond, startIndex, endIndex);
+  if (endIndex === 360) {
+     renderTransferSlider(startIndex, endIndex);
+  }
   return;
 }
 
 
-var slider = document.getElementById("myRange");
-slider.oninput = function() {
-  startIndex = parseInt(this.value);
-  pageIndex = startIndex
-  reWriteLinks(pageIndex, zoomScale);
-  redrawChart();
-}
 
-function redrawChart() {
-  let endIndex = startIndex + zoomScale;
-  if (endIndex > dates.length) {
-    endIndex = dates.length;
-  }
-  document.getElementById("range-start").innerHTML = dates[startIndex];
-  document.getElementById("range-end").innerHTML = dates[endIndex-1]; 
+function redrawChart(startIndex, endIndex) {
+  // TODO - need startIndex and endIndex
+  
   fileTransferChart.data.labels = dates.slice(startIndex, endIndex);
   fileTransferChart.data.datasets[0].data = transferRate.slice(startIndex, endIndex);  
   fileTransferChart.data.datasets[1].data = mibPerS.slice(startIndex, endIndex);  
@@ -260,24 +313,10 @@ function redrawChart() {
 }
 
 
-function plotFileTransferGraph(fileTracker, seconds, bytesForSecond) {
-  dates = seconds.map(toDate);
+function plotFileTransferGraph(fileTracker, seconds, bytesForSecond, startIndex, endIndex) {
   mibPerS = bytesForSecond.map(toMBSecond);
   transferRate = bytesForSecond;	
   let percentageDone = Math.floor((fileTracker.BytesTransferred * 100)/fileTracker.FileLength);
-
-  if (dates.length <= 360) {
-    endIndex = dates.length;	  
-    // No Slider
-    document.getElementById("chart-slider-container").style.display = "none";	  
-  } else {
-    endIndex = startIndex + zoomScale; 
-    // Need to setup Slider Range 
-    document.getElementById("myRange").max = dates.length;
-    document.getElementById("range-start").innerHTML = dates[0];
-    document.getElementById("range-end").innerHTML = dates[endIndex-1]; 
-  }	  
-
 
   fileTransferChart = new Chart("FileTransferChart", {
    type: "line",
@@ -359,6 +398,7 @@ function localReWriteLinks() {
   document.getElementById('filetrackers-link').href = "filetrackers.html" + baseQuery;
   document.getElementById('migrations-link').href = "migrations.html" + baseQuery;
   document.getElementById('network-link').href = "network.html" + baseQuery;
+  document.getElementById('eventstream-link').href = "eventstream.html" + baseQuery;
   return middleTimestamp;
 }
 

@@ -161,6 +161,10 @@ function getNetworkLink() {
    return "network.html" + getQueryBase();
 }
 
+function getEventStreamLink() {
+   return "eventstream.html" + getQueryBase();
+}
+
 function reWriteLinks() {
     document.getElementById('index-link').href = getIndexLink();
     document.getElementById('throughput-link').href = getThroughputLink();
@@ -168,6 +172,7 @@ function reWriteLinks() {
     document.getElementById('filetrackers-link').href = getFileTrackerLink();
     document.getElementById('migrations-link').href = getMigrationsLink();
     document.getElementById('network-link').href = getNetworkLink();
+    document.getElementById('eventstream-link').href = getEventStreamLink();
 }
 
 

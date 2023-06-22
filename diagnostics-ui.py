@@ -280,8 +280,17 @@ class ReportBuilder(object):
                 "timeStamp": [],
                 "pendingRegions": [],
                 "events": [],
+                "maxLatency": [],
+                "actionQueueLatency": [],
+                "sourceEventLatency": [],
             }
         )
+
+        # get the Events Added Delta
+        result["deltaEventsAdded"] = []
+        deltas = self.observations.getDeltas()
+        for key in sorted(deltas):
+            result["deltaEventsAdded"].append(deltas[key]["deltaEventsAdded"])
 
         # compute this field
         result["actions"] = [
@@ -362,6 +371,19 @@ class ReportBuilder(object):
             }
         )
 
+    def buildEventStream(self):
+        return self._fill(
+            {
+                "timeStamp": [],
+                "avgEventsReadPerCall": [],
+                "maxEventsReadPerCall": [],
+                "avgRpcCallTime": [],
+                "maxRpcCallTime": [],
+                "maxEventsBehind": [],
+                "avgEventsBehind": [],
+            }
+        )
+
     def buildDiagnosticsCollectionTime(self):
         return self._fill(
             {
@@ -369,6 +391,9 @@ class ReportBuilder(object):
                 "collectionTime": [],
             }
         )
+
+    def buildDeltas(self):
+        return self.observations.getDeltas()
 
     def _fill(self, result):
         for o in self.observations.retrieve_all():
@@ -396,6 +421,8 @@ class ReportWriter(object):
             "db_diagnostics": report_builder.buildEventManagerDBdiagnostics,
             "migration_failures": report_builder.buildMigrationDiagnostics,
             "diagnostic_collection_time": report_builder.buildDiagnosticsCollectionTime,
+            "deltas": report_builder.buildDeltas,
+            "eventstream": report_builder.buildEventStream,
         }
 
         for reportName, fn in functionMap.items():
@@ -413,6 +440,9 @@ class StatsBuckets(object):
     def __init__(self):
         self.bytesPerSecond = []
         self.totalFileSizeBeingTransferred = []
+        self.maxLatency = []
+        self.sourceEventLatency = []
+        self.actionQueueLatency = []
         self.filesForPeriod = []
         self.filesPerSecond = []
         self.ioWaitPercentage = []
@@ -422,7 +452,7 @@ class StatsBuckets(object):
         self.retrnsmt = []
         self.pendingRegions = []
         self.events = []
-        self.actions = []
+        self.totalEventsAdded = []
         self.failedPaths = []
         self.retries = []
         self.processCpuLoad = []
@@ -432,6 +462,12 @@ class StatsBuckets(object):
         self.filetrackerCount = []
         self.eventManagerMeanDbTime = []
         self.eventManagerMaxDbTime = []
+        self.avgEventsReadPerCall = []
+        self.maxEventsReadPerCall = []
+        self.avgRpcCallTime = []
+        self.maxRpcCallTime = []
+        self.avgEventsBehind = []
+        self.maxEventsBehind = []
 
 
 class ObservationsForTimestamp(object):
@@ -442,6 +478,7 @@ class ObservationsForTimestamp(object):
         self.migrations = {}
         self.migrationsTransferCounts = {}
         self.actionStoreFoundCount = 0
+        self.totalRequeueCount = 0
         self.fixed = False
         # BUG - sometimes throughput is not set and diagnostic is
         # essentially corrupt. Perhaps straight after a restart?
@@ -489,6 +526,26 @@ class ObservationsForTimestamp(object):
                 num_fmt(diagnostic.get("iowaitPercentage"))
             )
 
+        elif diagnostic["type"] == "InotifyDiagnosticDTO":
+            self.buckets.avgEventsReadPerCall.append(
+                num_fmt(diagnostic.get("avgEventsReadPerCall"))
+            )
+            self.buckets.maxEventsReadPerCall.append(
+                num_fmt(diagnostic.get("maxEventsReadPerCall"))
+            )
+            self.buckets.avgRpcCallTime.append(
+                num_fmt(diagnostic.get("avgRpcCallTime"))
+            )
+            self.buckets.maxRpcCallTime.append(
+                num_fmt(diagnostic.get("maxRpcCallTime"))
+            )
+            self.buckets.maxEventsBehind.append(
+                num_fmt(diagnostic.get("maxEventsBehind"))
+            )
+            self.buckets.avgEventsBehind.append(
+                num_fmt(diagnostic.get("avgEventsBehind"))
+            )
+
         elif diagnostic["type"] == "NetworkStatusDTO":
             self.buckets.connectionCount.append(len(diagnostic["connections"]))
             totals = self._getConnectionTotals(diagnostic["connectionTotals"])
@@ -517,6 +574,7 @@ class ObservationsForTimestamp(object):
 
         elif diagnostic["type"] == "EventManagerDiagnosticDTO":
             self.buckets.events.append(diagnostic["totalQueuedEvents"])
+            self.buckets.totalEventsAdded.append(diagnostic["totalEventAdded"])
             self.buckets.eventManagerMeanDbTime.append(
                 num_fmt(diagnostic["meanDbTime"])
             )
@@ -549,11 +607,26 @@ class ObservationsForTimestamp(object):
             # the migrations internal id, will need to translate this to the user
             # provided migration id in the fix method.
             totalFileSizeBeingTransferred = 0
+            maxLatency = 0
+            sourceEventLatency = 0
+            actionQueueLatency = 0
             for filetracker in diagnostic["fileTrackers"]:
                 identity = filetracker["MigrationId"]
                 totalFileSizeBeingTransferred = (
                     totalFileSizeBeingTransferred + filetracker["FileLength"]
                 )
+
+                if filetracker["EventLatency"] > maxLatency:
+                    maxLatency = filetracker["EventLatency"]
+                    sourceEventLatency = (
+                        filetracker["LdmEventCreationTimeStamp"]
+                        - filetracker["SourceEventCreationTimeStamp"]
+                    )
+                    actionQueueLatency = (
+                        filetracker["StartTime"]
+                        - filetracker["LdmEventCreationTimeStamp"]
+                    )
+
                 if identity in self.migrationsTransferCounts:
                     self.migrationsTransferCounts[identity] = (
                         self.migrationsTransferCounts[identity] + 1
@@ -564,6 +637,9 @@ class ObservationsForTimestamp(object):
             self.buckets.totalFileSizeBeingTransferred.append(
                 totalFileSizeBeingTransferred
             )
+            self.buckets.maxLatency.append(maxLatency)
+            self.buckets.sourceEventLatency.append(sourceEventLatency)
+            self.buckets.actionQueueLatency.append(actionQueueLatency)
 
     def _process_migration_diagnostic_dto(self, migration_diagnostic):
         # Address broken change in diagnostics schema
@@ -591,6 +667,13 @@ class ObservationsForTimestamp(object):
                 migration["migrationPathsRequeued"] = migration_diagnostic[
                     "migrationPathsRequeued"
                 ][migrationId]
+
+        if "migrationPathsRequeued" in migration_diagnostic:
+            for key in migration_diagnostic["migrationPathsRequeued"]:
+                self.totalRequeueCount = (
+                    self.totalRequeueCount
+                    + migration_diagnostic["migrationPathsRequeued"][key]
+                )
 
     def _getMigrationsRecord(self, migrationId):
         # get the migration record for migration, if we do
@@ -628,6 +711,7 @@ class ObservationsForTimestamp(object):
 class ObservationAccumulator(object):
     def __init__(self):
         self.observations = []
+        self.deltasMap = {}
         self.fixed = False
 
     def add(self, obv):
@@ -635,6 +719,12 @@ class ObservationAccumulator(object):
             raise Exception("Attempt to add after ObservationAccumulator completed.")
 
         self.observations.extend(obv)
+
+    def getDeltas(self):
+        if not self.fixed:
+            self.retrieve_all()
+
+        return self.deltasMap
 
     def retrieve_all(self):
         if self.fixed:
@@ -676,8 +766,58 @@ class ObservationAccumulator(object):
                 % len(missing_migration_ids)
             )
 
+        self._buildDeltas()
         self.fixed = True
         return self.observations
+
+    def _emptyDelta(self):
+        return {
+            "deltaEventsQueued": 0,
+            "deltaEventsAdded": 0,
+            "deltaPendingRegions": 0,
+            "deltaActions": 0,
+            "deltaFailedPaths": 0,
+            "deltaRetries": 0,
+            "deltaRequeues": 0,
+        }
+
+    def _buildDeltas(self):
+        self.deltasMap = {}
+        firstDelta = self._emptyDelta()
+        count = 0
+        for o in self.observations:
+            if count == 0:
+                self.deltasMap[o.timeStamp] = firstDelta
+                previousO = o
+                count = count + 1
+                continue
+
+            delta = self._emptyDelta()
+            delta["deltaActions"] = (
+                o.actionStoreFoundCount - previousO.actionStoreFoundCount
+            )
+            delta["deltaEventsQueued"] = (
+                o.buckets.events[0] - previousO.buckets.events[0]
+            )
+            delta["deltaEventsAdded"] = (
+                o.buckets.totalEventsAdded[0] - previousO.buckets.totalEventsAdded[0]
+            )
+            # Catch possible restart when totalEventsAdded could be reset to zero
+            if delta["deltaEventsAdded"] < 0:
+                delta["deltaEventsAdded"] = 0
+
+            delta["deltaFailedPaths"] = (
+                o.buckets.failedPaths[0] - previousO.buckets.failedPaths[0]
+            )
+            delta["deltaPendingRegions"] = (
+                o.buckets.pendingRegions[0] - previousO.buckets.pendingRegions[0]
+            )
+            delta["deltaRetries"] = o.buckets.retries[0] - previousO.buckets.retries[0]
+            delta["deltaRequeue"] = o.totalRequeueCount - previousO.totalRequeueCount
+            self.deltasMap[o.timeStamp] = delta
+            previousO = o
+
+        return self.deltasMap
 
 
 def process_file_impl(workspace, filepath, filename):

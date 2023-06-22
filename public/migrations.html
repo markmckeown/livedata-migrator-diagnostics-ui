@@ -21,6 +21,7 @@
     <a id="system-link" href="system.html">System</a>
     <a id="network-link" href="network.html">Network</a>
     <a id="migrations-link" href="migrations.html"  style="background-color: #FED8B1;">Migrations</a>
+    <a id="eventstream-link" href="eventstream.html">Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
 </div>
 
@@ -30,7 +31,7 @@
 	<canvas id="PendingRegionChart" height="400px"></canvas>
       </div>
       <div>
-	<canvas id="ActionsChart" height="400px"></canvas>
+	<canvas id="LatencyChart" height="400px"></canvas>
       </div>
       <div>
         <canvas id="EventsChart" height="400px"></canvas>
@@ -56,12 +57,16 @@ var failedPaths;
 var retries;
 var pendingRegions;
 var actions;
+var maxLatency;
+var sourceEventLatency;
+var actionQueueLatency;
 var events;
+var deltaEventsAdded;
 
 // Charts
 var failedPathsChart;
 var pendingRegionChart;
-var actionsChart;
+var latencyChart;
 var eventsChart;
 
 
@@ -116,7 +121,7 @@ function doFailedPathsChart(json, startIndex, middleIndex, endIndex) {
         },
         title: {
           display: true,
-          text: "Total Failed Paths and Retries."
+          text: "Total Failed Paths and Retries for all Migrations."
         }
       },
       scales: {
@@ -137,7 +142,6 @@ function doFailedPathsChart(json, startIndex, middleIndex, endIndex) {
         y: {
           display: true,
           type: 'linear',
-          min: 0.0,
           position: 'left', 
           title: {
             display: true,
@@ -147,7 +151,6 @@ function doFailedPathsChart(json, startIndex, middleIndex, endIndex) {
         y1: {
           display: true,
           type: 'linear',
-          min: 0.0,
           position: 'right', 
           grid: {
              drawOnChartArea: false, // only want the grid lines for one axis to show up
@@ -166,18 +169,28 @@ function doFailedPathsChart(json, startIndex, middleIndex, endIndex) {
 
 function doPendingRegionChart(queue, startIndex, middleIndex, endIndex) {
   pendingRegions = queue.pendingRegions;
+  actions = queue.actions;
 
   pendingRegionChart = new Chart("PendingRegionChart", {
     type: "line",
     data: {
       labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
       datasets: [{
-        label: "Pending Regions",
+        label: "Total Actions Queued",
         fill: false,
         lineTension: 0.4,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
-        data: pendingRegions.slice(startIndex, endIndex)
+        data: actions.slice(startIndex, endIndex)
+      },
+      {
+        label: "Total Pending Regions Queued",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
+        data: pendingRegions.slice(startIndex, endIndex),
+        yAxisID: 'y1',
       }]
     },
     options: {
@@ -201,7 +214,7 @@ function doPendingRegionChart(queue, startIndex, middleIndex, endIndex) {
         },
         title: {
           display: true,
-          text: "Total Pending Regions Queue"
+          text: "Actions and Pending Region Queues for all Migrations"
         }
       },
       scales: {
@@ -222,7 +235,18 @@ function doPendingRegionChart(queue, startIndex, middleIndex, endIndex) {
         y: {
           display: true,
           type: 'linear',
-          min: 0.0,
+          title: {
+            display: true,
+            text: 'Actions'
+          }
+        },
+        y1: {
+          display: true,
+          type: 'linear',
+          position: 'right', 
+          grid: {
+             drawOnChartArea: false, // only want the grid lines for one axis to show up
+          },
           title: {
             display: true,
             text: 'Pending Regions'
@@ -233,20 +257,45 @@ function doPendingRegionChart(queue, startIndex, middleIndex, endIndex) {
   });
 }
 
-function doActionsChart(queue, startIndex, middleIndex, endIndex) {
-  actions = queue.actions;
+function toSeconds(value, index, array) {
+  return Math.floor(value / 1000);
+}
 
-  actionsChart = new Chart("ActionsChart", {
+function doLatencyChart(queue, startIndex, middleIndex, endIndex) {
+  maxLatency = queue.maxLatency;
+  sourceEventLatency = queue.sourceEventLatency.map(toSeconds);
+  actionQueueLatency = queue.actionQueueLatency.map(toSeconds);
+
+  latencyChart = new Chart("LatencyChart", {
     type: "line",
     data: {
       labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
       datasets: [{
-        label: "Actions",
+        label: "Latency",
         fill: false,
         lineTension: 0.4,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
-        data: actions.slice(startIndex, endIndex),
+        data: maxLatency.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      },
+      {
+        label: "Time Queued as Action",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
+        data: actionQueueLatency.slice(startIndex, endIndex),
+        yAxisID: 'y1',
+      },
+      {
+        label: "Time Queued before becoming Action",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor: transparentize(0,100,0, 0.5),
+        borderColor: 'rgb(0,100,0)',
+        data: sourceEventLatency.slice(startIndex, endIndex),
+        yAxisID: 'y2',
       }]
     },
     options: {
@@ -270,9 +319,21 @@ function doActionsChart(queue, startIndex, middleIndex, endIndex) {
         },
         title: {
           display: true,
-          text: "Total Actions Queue"
+          text: "Transferring Files Migration Latency"
+        },
+        tooltip: {
+           callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+
+              if (context.parsed.y !== null) {
+                  label = label + ' ' + secondsToTime(context.parsed.y);
+              }
+              return label;
+            },
+         },
         }
-      },
+     },
       scales: {
         x: {
           display: true,
@@ -291,31 +352,56 @@ function doActionsChart(queue, startIndex, middleIndex, endIndex) {
         y: {
           display: true,
           type: 'linear',
-          min: 0.0,
           title: {
             display: true,
-            text: 'Actions'
+            text: 'Latency (seconds)'
           }
+        },
+        y1: {
+          display: false,
+          type: 'linear',
+          position: 'right', 
+          grid: {
+             drawOnChartArea: false, // only want the grid lines for one axis to show up
+          },
+          title: {
+            display: true,
+            text: 'Time Spent in Action Queue'
+          }
+        },
+        y2: {
+          display: false,
         }
       }
-    }
+   }
   });
 }
 
 function doEventsChart(queue, startIndex, middleIndex, endIndex) {
   events = queue.events;
+  deltaEventsAdded = queue.deltaEventsAdded; 
 
   eventsChart = new Chart("EventsChart", {
     type: "line",
     data: {
       labels: diagnosticsTimeSeries.dates.slice(startIndex, endIndex),
       datasets: [{
-        label: "Events Queue",
+        label: "Events Queued",
         fill: false,
         lineTension: 0.4,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: events.slice(startIndex, endIndex),
+        yAxisID: 'y'
+      },
+      {
+        label: "Events Added for Period",
+        fill: false,
+        lineTension: 0.4,
+        backgroundColor:  transparentize(54, 162, 235, 0.5),
+        borderColor: 'rgb(54, 162, 235)',
+        data: deltaEventsAdded.slice(startIndex, endIndex),
+        yAxisID: 'y1',
       }]
     },
     options: {
@@ -339,7 +425,7 @@ function doEventsChart(queue, startIndex, middleIndex, endIndex) {
         },
         title: {
           display: true,
-          text: "Total Events Queue"
+          text: "Total Events Queue for all Migrations."
         }
       },
       scales: {
@@ -360,10 +446,22 @@ function doEventsChart(queue, startIndex, middleIndex, endIndex) {
         y: {
           display: true,
           type: 'linear',
-          min: 0.0,
+          position: 'left', 
           title: {
             display: true,
             text: 'Events'
+          }
+        },
+        y1: {
+          display: true,
+          type: 'linear',
+          position: 'right', 
+          grid: {
+             drawOnChartArea: false, // only want the grid lines for one axis to show up
+          },
+          title: {
+            display: true,
+            text: 'Events Added for Period'
           }
         }
       }
@@ -373,7 +471,7 @@ function doEventsChart(queue, startIndex, middleIndex, endIndex) {
 
 
 document.getElementById("PendingRegionChart").onclick = function(evt) {
-  var activePoint = actionsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  var activePoint = pendingRegionChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
@@ -382,8 +480,8 @@ document.getElementById("PendingRegionChart").onclick = function(evt) {
   }
 };
 
-document.getElementById("ActionsChart").onclick = function(evt) {
-  var activePoint = actionsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+document.getElementById("LatencyChart").onclick = function(evt) {
+  var activePoint = latencyChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
@@ -546,11 +644,11 @@ function resetAnnotation() {
            diagnosticsTimeSeries.middle;
   eventsChart.update();
 
-  actionsChart.options.plugins.annotation.annotations.line1.xMin =
+  latencyChart.options.plugins.annotation.annotations.line1.xMin =
            diagnosticsTimeSeries.middle;
-  actionsChart.options.plugins.annotation.annotations.line1.xMax =
+  latencyChart.options.plugins.annotation.annotations.line1.xMax =
            diagnosticsTimeSeries.middle;
-  actionsChart.update();
+  latencyChart.update();
 
   pendingRegionChart.options.plugins.annotation.annotations.line1.xMin =
            diagnosticsTimeSeries.middle;
@@ -575,22 +673,26 @@ function redrawChart() {
 
   eventsChart.data.labels = diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
   eventsChart.data.datasets[0].data = events.slice(startIndex, endIndex);
+  eventsChart.data.datasets[1].data = deltaEventsAdded.slice(startIndex, endIndex);
   eventsChart.options.plugins.annotation.annotations.line1.xMin =
            diagnosticsTimeSeries.middle;
   eventsChart.options.plugins.annotation.annotations.line1.xMax =
            diagnosticsTimeSeries.middle;
   eventsChart.update();
 
-  actionsChart.data.labels = diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
-  actionsChart.data.datasets[0].data = actions.slice(startIndex, endIndex);
-  actionsChart.options.plugins.annotation.annotations.line1.xMin =
+  latencyChart.data.labels = diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
+  latencyChart.data.datasets[0].data = maxLatency.slice(startIndex, endIndex);
+  latencyChart.data.datasets[1].data = actionQueueLatency.slice(startIndex, endIndex);
+  latencyChart.data.datasets[2].data = sourceEventLatency.slice(startIndex, endIndex);
+  latencyChart.options.plugins.annotation.annotations.line1.xMin =
            diagnosticsTimeSeries.middle;
-  actionsChart.options.plugins.annotation.annotations.line1.xMax =
+  latencyChart.options.plugins.annotation.annotations.line1.xMax =
            diagnosticsTimeSeries.middle;
-  actionsChart.update();
+  latencyChart.update();
 
   pendingRegionChart.data.labels = diagnosticsTimeSeries.dates.slice(startIndex, endIndex);
-  pendingRegionChart.data.datasets[0].data = pendingRegions.slice(startIndex, endIndex);
+  pendingRegionChart.data.datasets[0].data = actions.slice(startIndex, endIndex);
+  pendingRegionChart.data.datasets[1].data = pendingRegions.slice(startIndex, endIndex);
   pendingRegionChart.options.plugins.annotation.annotations.line1.xMin =
            diagnosticsTimeSeries.middle;
   pendingRegionChart.options.plugins.annotation.annotations.line1.xMax =
@@ -648,7 +750,7 @@ async function getQueues() {
        diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start], 
        diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle], 
        diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]);
-    doActionsChart(json,
+    doLatencyChart(json,
        diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start], 
        diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle], 
        diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]);

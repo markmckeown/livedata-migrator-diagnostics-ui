@@ -20,30 +20,23 @@
     <a id="system-link" href="system.html">System</a>
     <a id="network-link" href="network.html">Network</a>
     <a id="migrations-link" href="migrations.html">Migrations</a>
+    <a id="eventstream-link" href="eventstream.html">Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
 </div>
 
 <!-- !PAGE CONTENT! -->
 <div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
-   <div class="throughput-charts-wrapper">
-      <div>
         <div>
            <canvas id="ThroughPutChart" height="400"></canvas>
         </div>
-      </div>
-      <div>
         <div>
            <canvas id="TotalFileSizeChart" height="400"></canvas>
         </div>
-     </div>
-     <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
-   </div>
+   <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
 <!-- !PAGE CONTENT! -->
 </div>
 
 <script>
-var byterate;
-var filerate;
 var totalFileSize;
 var activeTransferCount;
 var totalFileSizeChart;
@@ -57,6 +50,7 @@ var slider = document.getElementById('slider');
 // Charts
 var throughPutChart;
 var totalFileSizeChart;
+
 
 
 function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
@@ -106,13 +100,9 @@ function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
         }
       },
       title: {
-          display: false,
+          display: true,
           fullSize: true, 
-          font: {
-               size: 24
-          },
           text: "Throughput",
-          color: 'rgb(139, 64, 0)',
         }
       },
       scales: {
@@ -247,6 +237,11 @@ function doTotalFileSizeChart(throughput, startIndex, middleIndex, endIndex) {
           type: 'linear',
           min: 0.0,
           position: 'left', 
+          ticks: {
+                    callback: function(value, index, ticks) {
+                        return humanFileSize(value);
+                    }
+                },
           title: {
             display: true,
             text: 'Total File Size for Period'

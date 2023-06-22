@@ -21,6 +21,7 @@
     <a id="system-link" href="system.html">System</a>
     <a id="network-link" href="network.html">Network</a>
     <a id="migrations-link" href="migrations.html">Migrations</a>
+    <a id="eventstream-link" href="eventstream.html">Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
 </div>
 
@@ -69,35 +70,46 @@
       <table id="diagnostic-summary-table-5" style="margin-top:10px">   
          <tr id="migration-row" onclick="clickJump(this)" style="cursor: pointer;">
              <th width="250px" title="The three main queues of work for the migrations.">Migration Queues</th>
-             <td>Events</td>
+             <td title="Events currently queued to be processed. Events are filtered from the source filesystem and queued to be processed. Once processed they are turned into Actions. If events are quickly turned into actions then the event queue can be zero. If a migration is stopped then events can remain queued and the number remains static.">Events Queued</td>
              <td><span id="diagnostic-summary-event-queue">-</span></td>
-             <td>Pending Regions</td>
+             <td title="Number of scans that are queued. If LiveData Migrator is unsure about an action then it can queue part of the filesystem to be scanned, these are called pending regions. When a migration first starts the initial pending region will be for the root of the migration.">Pending Regions</td>
              <td><span id="diagnostic-summary-pending-region">-</span></td>
-             <td>Actions</td>
+             <td title="Actions queued to be executed. If a migration is stopped then the actions queue can stay at a fixed size.">Actions</td>
              <td><span id="diagnostic-summary-action-queue">-</span></td>
          </tr>
       </table>
       <table id="diagnostic-summary-table-6" style="margin-top:10px">   
          <tr id="migration-failure-row" onclick="clickJump(this)" style="cursor: pointer;">
              <th width="250px" >Migration Failure/Retry</th>
-             <td>Total Failed Paths</td>
+             <td title="Number of paths that have failed to migrate.">Total Failed Paths</td>
              <td><span id="diagnostic-summary-failed-paths">-</span></td>
-             <td>Total Retries</td>
+             <td title="Number of retries at trying to migrate a path. A path will be tried a number of times and then requeued, it will go through this process a number of times before giving up and declaring the it a failed path.">Total Retries</td>
              <td><span id="diagnostic-summary-total-retries">-</span></td>
-             <td>Total Requeus</td>
+             <td title="Number of times paths have been requeued. If an attempt to migrate a path fails it will be retried a number of times before being requeued to try again later. If the failure reason is transient then the path may succeed in a subsequent attempt. After retries and requeues have been exhausted the process gives up and the path is marked as a failed path.">Total Requeues</td>
              <td><span id="diagnostic-summary-total-requeues">-</span></td>
          </tr>
       </table>
       <table id="diagnostic-summary-table-4" style="margin-top:10px">   
          <tr id="filesystem-event-row" onclick="clickJump(this)" style="cursor: pointer;">
             <th width="250px" >FileSystem Events</th>
-            <td>Events Added</td>
+            <td title="Total events that have been added to the system and turned into actions since the process was started. Events are queued then turned into actions, this is the total number of events that were turned into actions. When the process is restarted this number is reset to zero. If events are processed very quickly in the event queue then it can appear zero most of the time while the events added increases.">Total Events Added</td>
             <td><span id="diagnostic-summary-event-manager-added">-</span></td>
             <td title="Sample of the average time spent on a database write in ms. If this figure is high then sysetm may be IO bound.">Avg Database Time</td>
             <td><span id="diagnostic-summary-event-manager-avg-db">-</span></td>
             <td title="Maxium database write time in ms. If this is high then system could be under IO pressure.">Max Database Time</td>
-            <td><span id="diagnostic-summary-event-manager-max-db">-</span></td>
+            <td title="The maximum time for a database write while adding events to the database. This is periodically reset. This can indicate disk IO issues or JVM spikes as threads get blocked writing to the database."><span id="diagnostic-summary-event-manager-max-db">-</span></td>
          </tr>
+      </table>
+      <table id="diagnostic-summary-table-8" style="margin-top:10px">
+         <tr id="event-stream-row" onclick="clickJump(this)" style="cursor: pointer;">
+             <th width="250px">Event Stream</th>
+             <td title="Total events read from event stream. These are filtered and stored in the EventManager before being added as Actions to Action Queue. Total is reset on restart.">Events Read</td>
+             <td><span id="event-stream-total-events-read">-</span></td>
+             <td title="Time to make RPC call to retrieve events from event stream.">RPC Time (avg/max ms)</td>
+             <td><span id="event-stream-rpc-times">-</span></td>
+             <td title="Amount of Events read from event stream in RPC, average and maximum. The mximum is periodically reset. Also included is the maximum events behind. ">Events/RPC (avg/max behind)</td>
+             <td><span id="event-stream-events-per-rpc">-</span></td>
+         </tr> 
       </table>
       <table id="diagnostic-summary-table-2" style="margin-top:10px">   
          <tr id="network-status-row" onclick="clickJump(this)" style="cursor: pointer;">
@@ -173,6 +185,7 @@ var recentMigrations;
 var byterate;
 var filerate;
 var jvmGCTimeMap = {};
+var diagnosticDeltas;
 
 // Sliders
 var slider = document.getElementById('slider');
@@ -929,10 +942,10 @@ function getConnectionDetails(diagnostic) {
 
   if (totals.retrnsmt > 1) {
     document.getElementById("diagnostic-summary-table-retransmit").innerHTML = 
-        "<div style=\"font-weight: bold;color:red\">" + totals.retrnsmt + "</div>";
+        "<span style=\"font-weight: bold;color:red\">" + totals.retrnsmt + "</span>";
   } else if (totals.retrnsmt === 1) {
     document.getElementById("diagnostic-summary-table-retransmit").innerHTML =
-        "<div style=\"font-weight: bold;color:orange\">" + totals.retrnsmt + "</div>";
+        "<span style=\"font-weight: bold;color:orange\">" + totals.retrnsmt + "</span>";
   } else {
     document.getElementById("diagnostic-summary-table-retransmit").innerHTML = totals.retrnsmt;
   }
@@ -953,20 +966,20 @@ function getThroughPut(diagnostic) {
 function getCPULoad(diagnostic) {
   if (diagnostic.systemCpuLoad > 0.9) {
     document.getElementById("diagnostic-summary-system-cpu").innerHTML =
-         "<div style=\"font-weight: bold;color:red\">" + diagnostic.systemCpuLoad.toFixed(3) + "</div>";
+         "<span style=\"font-weight: bold;color:red\">" + diagnostic.systemCpuLoad.toFixed(3) + "</span>";
   } else if (diagnostic.systemCpuLoad > 0.7) {
     document.getElementById("diagnostic-summary-system-cpu").innerHTML =
-         "<div style=\"font-weight: bold;color:orange\">" + diagnostic.systemCpuLoad.toFixed(3) + "</div>";
+         "<span style=\"font-weight: bold;color:orange\">" + diagnostic.systemCpuLoad.toFixed(3) + "</span>";
   } else {
     document.getElementById("diagnostic-summary-system-cpu").innerHTML = diagnostic.systemCpuLoad.toFixed(3);
   }
 
   if (diagnostic.processCpuLoad > 0.9) {
     document.getElementById("diagnostic-summary-process-cpu").innerHTML =
-         "<div style=\"font-weight: bold;color:red\">" + diagnostic.processCpuLoad.toFixed(3)  + "</div>";
+         "<span style=\"font-weight: bold;color:red\">" + diagnostic.processCpuLoad.toFixed(3)  + "</span>";
   } else if (diagnostic.processCpuLoad > 0.7) {
     document.getElementById("diagnostic-summary-process-cpu").innerHTML = 
-         "<div style=\"font-weight: bold;color:orange\">" + diagnostic.processCpuLoad.toFixed(3) + "</div>";
+         "<span style=\"font-weight: bold;color:orange\">" + diagnostic.processCpuLoad.toFixed(3) + "</span>";
   } else {
     document.getElementById("diagnostic-summary-process-cpu").innerHTML = diagnostic.processCpuLoad.toFixed(3);
   }
@@ -983,58 +996,134 @@ function getIOLoad(diagnostic) {
 
   if (value > 3.0) {
      document.getElementById("diagnostic-summary-io-wait").innerHTML =
-       "<div style=\"font-weight: bold;color:red\">" + value + "</div>";
+       "<span style=\"font-weight: bold;color:red\">" + value + "</span>";
   } else if (value > 1.0) {
      document.getElementById("diagnostic-summary-io-wait").innerHTML = 
-       "<div style=\"font-weight: bold;color:orange\">" + value + "</div>"; 
+       "<span style=\"font-weight: bold;color:orange\">" + value + "</span>"; 
   } else {
      document.getElementById("diagnostic-summary-io-wait").innerHTML = value;
   }
 }
 
-function getMigrationDiagnostic(diagnostic) {
+function getMigrationDiagnostic(diagnostic, timeStamp) {
+  let pendingRegionsDelta = diagnosticDeltas[timeStamp].deltaPendingRegions;
+  let failedPathsDelta = diagnosticDeltas[timeStamp].deltaFailedPaths;
+  let retriesDelta = diagnosticDeltas[timeStamp].deltaRetries;
+  let requeuesDelta = diagnosticDeltas[timeStamp].deltaRequeues;
+
+
+  let pendingRegionsDeltaString = pendingRegionsDelta.toLocaleString("en-US");
+  if (pendingRegionsDelta > 0) {
+     pendingRegionsDeltaString = "+" + pendingRegionsDeltaString;
+  }
   if (diagnostic.totalPendingRegions > 1000000) {
      document.getElementById("diagnostic-summary-pending-region").innerHTML = 
-       "<div style=\"font-weight: bold;color:red\">" + 
-           diagnostic.totalPendingRegions.toLocaleString("en-US") + "</div>";
+       "<span style=\"font-weight: bold;color:red\">" + 
+           diagnostic.totalPendingRegions.toLocaleString("en-US") + "</span>" +
+         " (" + pendingRegionsDeltaString + ")";
   } else if (diagnostic.totalPendingRegions > 500000) {
      document.getElementById("diagnostic-summary-pending-region").innerHTML = 
-        "<div style=\"font-weight: bold;color:orange\">" +
-                diagnostic.totalPendingRegions.toLocaleString("en-US") + "</div>";;
+        "<span style=\"font-weight: bold;color:orange\">" +
+                diagnostic.totalPendingRegions.toLocaleString("en-US") + "</span>" +
+         " (" + pendingRegionsDeltaString + ")";
   } else {
      document.getElementById("diagnostic-summary-pending-region").innerHTML = 
-                diagnostic.totalPendingRegions.toLocaleString("en-US");
+                diagnostic.totalPendingRegions.toLocaleString("en-US")
+        + " (" + pendingRegionsDeltaString + ")";
+  }
+
+  let deltaRetryString = " (" + retriesDelta.toLocaleString("en-US") + ")";
+  if (retriesDelta > 0) {
+     deltaRetryString = "<span style=\"font-weight: bold;color:orange\">" + " (+" +
+        retriesDelta.toLocaleString("en-US") + ")</span>";
+  }
+  let failedPathsDeltaString = " (" + failedPathsDelta.toLocaleString("en-US") + ")";
+  if (failedPathsDelta > 0 ) {
+     failedPathsDeltaString = "<span style=\"font-weight: bold;color:red\">" + " (+" + 
+         failedPathsDelta.toLocaleString("en-US") + ")</span>";
   }
 
   document.getElementById("diagnostic-summary-failed-paths").innerHTML = 
-                diagnostic.totalFailedPaths.toLocaleString("en-US");
+                diagnostic.totalFailedPaths.toLocaleString("en-US") +
+                failedPathsDeltaString;
+
   document.getElementById("diagnostic-summary-total-retries").innerHTML = 
-                diagnostic.totalPathRetryCount.toLocaleString("en-US");
+                diagnostic.totalPathRetryCount.toLocaleString("en-US") +
+                deltaRetryString;
+
+  let totalRequeues = 0;
   if ("migrationPathsRequeued" in diagnostic) {
-     let totalRequeues = 0;
      for (const key in diagnostic.migrationPathsRequeued) {
          totalRequeues = totalRequeues + diagnostic.migrationPathsRequeued[key];
      }
-     document.getElementById("diagnostic-summary-total-requeues").innerHTML = 
-            totalRequeues.toLocaleString("en-US");
   }
+  
+  let requeuesDeltaString = " (" + requeuesDelta.toLocaleString("en-US") + ")";
+  if (requeuesDelta > 0) {
+      requeuesDeltaString = "<span style=\"font-weight: bold;color:orange\">" + " (+" +
+            requeuesDelta.toLocaleString("en-US") + ")</span>";
+  }
+  document.getElementById("diagnostic-summary-total-requeues").innerHTML = 
+            totalRequeues.toLocaleString("en-US") + 
+               requeuesDeltaString;
 }
 
 
-function getEventManagerDiagnostic(diagnostic) {
+function getInotifyDiagnostic(diagnostic) {
+  document.getElementById("event-stream-total-events-read").innerHTML = 
+        diagnostic.totalEventsRead.toLocaleString("en-US");
+
+  let maxRpc = diagnostic.maxRpcCallTime.toLocaleString("en-US");
+  if (diagnostic.maxRpcCallTime > 5000) {
+     maxRpc = "<span style=\"font-weight: bold;color:red\">" + maxRpc + "</span>";
+  } else if (diagnostic.maxRpcCallTime > 2000) {
+     maxRpc = "<span style=\"font-weight: bold;color:orange\">" + maxRpc + "</span>";
+  } 
+  document.getElementById("event-stream-rpc-times").innerHTML =  
+       diagnostic.avgRpcCallTime.toLocaleString("en-US") + " / " +
+       maxRpc;
+
+  let behind = diagnostic.maxEventsBehind.toLocaleString("en-US");
+  if (diagnostic.maxEventsBehind > 50000) {
+     behind = "<span style=\"font-weight: bold;color:red\">" + behind + "</span>";
+  } else if (diagnostic.maxEventsBehind > 0) {
+     behind = "<span style=\"font-weight: bold;color:orange\">" + behind + "</span>";
+  }
+  document.getElementById("event-stream-events-per-rpc").innerHTML = 
+       diagnostic.avgEventsReadPerCall.toLocaleString("en-US") + " / " +
+       diagnostic.maxEventsReadPerCall.toLocaleString("en-US") + " (" +
+       behind  + ")";
+}
+
+
+function getEventManagerDiagnostic(diagnostic, timeStamp) {
+  let eventsDeltaQueued = diagnosticDeltas[timeStamp].deltaEventsQueued;
+  let eventsDeltaQueuedString = eventsDeltaQueued.toLocaleString("en-US");
+  if (eventsDeltaQueued > 0) {
+       eventsDeltaQueuedString = "+" + eventsDeltaQueuedString;
+  }
+
+  let eventsDeltaAdded = diagnosticDeltas[timeStamp].deltaEventsAdded;
+  let eventsDeltaAddedString = eventsDeltaAdded.toLocaleString("en-US");  
+  if (eventsDeltaAdded > 0) {
+     eventsDeltaAddedString = "+" + eventsDeltaAddedString;
+  }
+
   document.getElementById("diagnostic-summary-event-queue").innerHTML = 
-         diagnostic.totalQueuedEvents.toLocaleString("en-US");
+         diagnostic.totalQueuedEvents.toLocaleString("en-US") +
+         " (" + eventsDeltaQueuedString + ")";
   document.getElementById("diagnostic-summary-event-manager-added").innerHTML = 
-         diagnostic.totalEventAdded.toLocaleString("en-US");
+         diagnostic.totalEventAdded.toLocaleString("en-US") + 
+         " (" + eventsDeltaAddedString + ")";
   document.getElementById("diagnostic-summary-event-manager-avg-db").innerHTML = 
          diagnostic.meanDbTime;
 
   if (diagnostic.maxDbTime > 500) {
     document.getElementById("diagnostic-summary-event-manager-max-db").innerHTML = 
-         "<div style=\"font-weight: bold;color:red\">" + diagnostic.maxDbTime + "</div>";
+         "<span style=\"font-weight: bold;color:red\">" + diagnostic.maxDbTime + "</span>";
   } else if (diagnostic.maxDbTime > 200) {
     document.getElementById("diagnostic-summary-event-manager-max-db").innerHTML = 
-         "<div style=\"font-weight: bold;color:orange\">" + diagnostic.maxDbTime + "</div>";
+         "<span style=\"font-weight: bold;color:orange\">" + diagnostic.maxDbTime + "</span>";
   } else {
     document.getElementById("diagnostic-summary-event-manager-max-db").innerHTML = 
          diagnostic.maxDbTime;
@@ -1053,14 +1142,14 @@ function getFileTracker(diagnostic) {
  
   if (totalFileTransferSize > 200000000000) { //200GB 
      document.getElementById("diagnostic-summary-total-size-transfers").innerHTML = 
-         "<div style=\"font-weight: bold;color:red\">" + 
+         "<span style=\"font-weight: bold;color:red\">" + 
          humanFileSize(totalBytesTransferred, true) + " / " +
-         humanFileSize(totalFileTransferSize, true) + "</div>";
+         humanFileSize(totalFileTransferSize, true) + "</span>";
   } else if (totalFileTransferSize > 100000000000) { //100GB 
      document.getElementById("diagnostic-summary-total-size-transfers").innerHTML = 
-         "<div style=\"font-weight: bold;color:orange\">" + 
+         "<span style=\"font-weight: bold;color:orange\">" + 
          humanFileSize(totalBytesTransferred, true) + " / " +
-         humanFileSize(totalFileTransferSize, true) + "</div>";
+         humanFileSize(totalFileTransferSize, true) + "</span>";
   } else {
      document.getElementById("diagnostic-summary-total-size-transfers").innerHTML = 
          humanFileSize(totalBytesTransferred, true) + " / " +
@@ -1080,10 +1169,10 @@ function getJvmGcDiagnostic(diagnostic, timeStamp) {
   
   if (gcForPeriod > 2000) {
     document.getElementById("diagnostic-summary-gc-time-period").innerHTML = 
-        "<div style=\"font-weight: bold;color:red\">" + gcForPeriod.toLocaleString("en-US") + "</div>";
+        "<span style=\"font-weight: bold;color:red\">" + gcForPeriod.toLocaleString("en-US") + "</span>";
   } else if (gcForPeriod > 1000) {
     document.getElementById("diagnostic-summary-gc-time-period").innerHTML = 
-        "<div style=\"font-weight: bold;color:orange\">" + gcForPeriod.toLocaleString("en-US") + "</div>";
+        "<span style=\"font-weight: bold;color:orange\">" + gcForPeriod.toLocaleString("en-US") + "</span>";
   } else {
     document.getElementById("diagnostic-summary-gc-time-period").innerHTML = 
         gcForPeriod.toLocaleString("en-US");
@@ -1108,14 +1197,17 @@ function processDiagnostic(json) {
          getIOLoad(diagnostic);
          break;
       case "MigrationDiagnosticDTO":
-         getMigrationDiagnostic(diagnostic);
+         getMigrationDiagnostic(diagnostic, json.diagnosticSet.timeStamp);
          break;
       case "ActionStoreDiagnosticDTO":
          // Processed in line here.
          actionTotal += diagnostic.totalUnExecutedEvents;
          break;
       case "EventManagerDiagnosticDTO":
-         getEventManagerDiagnostic(diagnostic);
+         getEventManagerDiagnostic(diagnostic, json.diagnosticSet.timeStamp);
+         break;
+      case "InotifyDiagnosticDTO":
+         getInotifyDiagnostic(diagnostic);
          break;
       case "FileTrackerDiagnosticDTO":
          getFileTracker(diagnostic);
@@ -1127,18 +1219,26 @@ function processDiagnostic(json) {
          break;
    }
  }
- 
+
+ let actionsDelta = diagnosticDeltas[json.diagnosticSet.timeStamp].deltaActions;
+ let actionsDeltaString = actionsDelta.toLocaleString("en-US");
+ if (actionsDelta > 0) {
+    actionsDeltaString = "+" + actionsDeltaString;
+ }
  if (actionTotal > 1000000) {
      document.getElementById("diagnostic-summary-action-queue").innerHTML = 
-       "<div style=\"font-weight: bold;color:red\">" +
-        actionTotal.toLocaleString("en-US") + "</div>";
+       "<span style=\"font-weight: bold;color:red\">" +
+        actionTotal.toLocaleString("en-US") + "</span>" +
+        " (" + actionsDeltaString + ")";
  } else if (actionTotal > 500000) {
      document.getElementById("diagnostic-summary-action-queue").innerHTML = 
-      "<div style=\"font-weight: bold;color:orange\">" +
-        actionTotal.toLocaleString("en-US") + "</div>";
+      "<span style=\"font-weight: bold;color:orange\">" +
+        actionTotal.toLocaleString("en-US") + "</span>" +
+        " (" + actionsDeltaString + ")";
  } else {
      document.getElementById("diagnostic-summary-action-queue").innerHTML = 
-        actionTotal.toLocaleString("en-US");
+        actionTotal.toLocaleString("en-US") +
+        " (" + actionsDeltaString + ")";
  }
 }
 
@@ -1157,6 +1257,9 @@ function clickJump(x) {
    }
    if (x.id === 'network-status-row') {
        window.location.href = getNetworkLink();
+   }
+   if (x.id === 'event-stream-row') {
+       window.location.href = getEventStreamLink();
    }
 }
 
@@ -1223,6 +1326,8 @@ async function getThroughputChart() {
   try {
     let json = await loadReport('throughput.gz');
     generateDiagnosticTimeSeries(json.timeStamp);
+    let deltas = await loadReport('deltas.gz');
+    diagnosticDeltas = deltas;
     // Get the diagnostics asynchronously
     getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
     // Generate the slider

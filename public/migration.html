@@ -21,6 +21,7 @@
  <a id="system-link" href="system.html">System</a>
  <a id="network-link" href="network.html">Network</a>
  <a id="migrations-link" href="migrations.html">Migrations</a>
+ <a id="eventstream-link" href="eventstream.html">Event Stream</a>
  <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
 </div>
 
@@ -146,7 +147,6 @@ function doActionChart(migration_time_series, startIndex, middleIndex, endIndex)
         y: {
           display: true,
           type: 'linear',
-          min: 0.0,
           position: 'left', 
           title: {
             display: true,
@@ -215,7 +215,6 @@ function doPendingRegionsChart(migration_time_series, startIndex, middleIndex, e
         y: {
           display: true,
           type: 'linear',
-          min: 0.0,
           position: 'left', 
           title: {
             display: true,
@@ -285,7 +284,6 @@ function doPathRetryChart(migration_time_series, startIndex, middleIndex, endInd
         y: {
           display: true,
           type: 'linear',
-          min: 0,
           position: 'left', 
           title: {
             display: true,
@@ -356,7 +354,6 @@ function doPathsRequeuedChart(migration_time_series, startIndex, middleIndex, en
         y: {
           display: true,
           type: 'linear',
-          min: 0.0,
           position: 'left', 
           title: {
             display: true,
@@ -426,7 +423,6 @@ function doFailedPathChart(migration_time_series, startIndex, middleIndex, endIn
         y: {
           display: true,
           type: 'linear',
-          min: 0.0,
           position: 'left', 
           title: {
             display: true,
@@ -508,7 +504,6 @@ function doBytesScannedChart(migration_time_series, startIndex, middleIndex, end
         y: {
           display: true,
           type: 'linear',
-          min: 0.0,
           position: 'left', 
           title: {
             display: true,
@@ -579,7 +574,6 @@ function doFilesScannedChart(migration_time_series, startIndex, middleIndex, end
         y: {
           display: true,
           type: 'linear',
-          min: 0.0,
           position: 'left', 
           title: {
             display: true,
@@ -650,7 +644,6 @@ function doActiveTransfersChart(migration_time_series, startIndex, middleIndex, 
         y: {
           display: true,
           type: 'linear',
-          min: 0.0,
           position: 'left', 
           title: {
             display: true,
@@ -723,7 +716,7 @@ document.getElementById("PathRetryChart").onclick = function(evt) {
 
 
 document.getElementById("PathsRequeuedChart").onclick = function(evt) {
-  var activePoint = pathsRequeuedChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  var activePoint = pathsRequeueChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
     var clickedElementindex = activePoint[0].index;
     chartOnClick(clickedElementindex)
