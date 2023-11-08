@@ -20,9 +20,10 @@
     <a id="throughput-link", href="throughput.html">Throughput</a>
     <a id="system-link" href="system.html">System</a>
     <a id="network-link" href="network.html">Network</a>
-    <a id="migrations-link" href="migrations.html"  style="background-color: #FED8B1;">Migrations</a>
+    <a id="migrations-link" class="nav_active" href="migrations.html"  style="background-color: #FED8B1;">Migrations</a>
     <a id="eventstream-link" href="eventstream.html">Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
+    <a style="float: right; padding: 9px 9px;" id="share-link" href="javascript:copyLink(getMigrationsLink());"><img src="share-fill.png" /></a>
 </div>
 
 <div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
@@ -557,7 +558,7 @@ function buildMigrationTable(mapPendingRegions, mapEvents, mapActions, mapFailed
   }
   document.getElementById("migration-table").innerHTML = text;
   var newTableObject = document.getElementById("migration-table");
-  sorttable.makeSortable(newTableObject);
+  makeSortable("migs", sorttable, newTableObject);
   return count;
 }
 

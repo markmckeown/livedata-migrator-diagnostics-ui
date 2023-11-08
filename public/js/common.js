@@ -121,12 +121,123 @@ function percentile(pOrPs, list) {
   });
 }
 
+function copyLink(link) {
+  let myurl = window.location.href;
+  var subUrl = myurl.substring(0,myurl.lastIndexOf("/") + 1);
+  return shareLink(subUrl + link);
+}
+
+function shareLink(shareLink) {
+
+  // Copy the text inside the text field
+  navigator.clipboard.writeText(shareLink).then(() => {
+     alert("URL copied to clipboard: " + shareLink);
+  });
+}
+
+var g_sortingPageId = null;
+var g_localSorting = null;
+
 function getQueryBase() {
     let startTimestamp =  diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.start]]
     let middleTimestamp = diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]] 
     let endTimestamp = diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.end]]
     let query = "?start=" + startTimestamp + "&middle=" + middleTimestamp + "&end=" + endTimestamp;
+
+    let sortBy = buildSortBy(g_sortingPageId);
+    if (sortBy) {
+      query = query + "&sortBy=" + sortBy;
+    }
+
     return query;
+}
+
+function getMySorting(pageId) {
+  // any sorting on the current page wins
+  if (g_localSorting !== null) {
+    return g_localSorting;
+  }
+
+  let sortBy = getSortByFromQueryParameter();
+  return sortBy[pageId];
+}
+
+function getSortByFromQueryParameter() {
+  const urlParams = new URLSearchParams(window.location.search);
+  let sortByEncoded = urlParams.get('sortBy');
+
+  let sortBy = {};
+  if (sortByEncoded) {
+    let elems = sortByEncoded.split(",");
+    for (let i = 0; i < elems.length; i++) {
+      var vals = elems[i].split(':');
+      sortBy[vals[0]] = parseInt(vals[1]);
+    }
+  }
+
+  return sortBy;
+}
+
+function encodeSortBy(sortBy) {
+  let encoded = "";
+
+  for (const [key, val] of Object.entries(sortBy)) {
+    if (encoded) {
+      encoded += ",";
+    }
+
+    encoded = encoded + key + ":" + val;
+  }
+
+  return encoded;
+}
+
+function buildSortBy(myId) {
+  let sortBy = getSortByFromQueryParameter();
+
+  if (myId) {
+    // any sorting on the current page wins
+    if (g_localSorting !== null) {
+      sortBy[myId] = g_localSorting;
+    }
+  }
+
+  return encodeSortBy(sortBy);
+}
+
+function makeSortable(pageId, s, newTableObject) {
+  g_sortingPageId = pageId;
+
+  s.attachOnSorted(function(colIndex) {
+    var sortedAsc = document.getElementsByClassName("sorttable_sorted")[0];
+    if (sortedAsc) {
+      g_localSorting = sortedAsc.cellIndex;
+    }
+
+    // assuming this won't coexist wih the above
+    var sortedDesc = document.getElementsByClassName("sorttable_sorted_reverse")[0];
+    if (sortedDesc) {
+      g_localSorting = sortedDesc.cellIndex * -1;
+    }
+
+    reWriteLinks();
+  });
+
+  s.makeSortable(newTableObject);
+
+  let mySorting = getMySorting(pageId);
+  if (typeof mySorting !== "undefined") {
+    //var myTH = document.getElementsByTagName("th")[sortBy];
+    var sortIndex = Math.abs(mySorting);
+    var myTH = newTableObject.getElementsByTagName("th")[sortIndex];
+    sorttable.innerSortFunction.apply(myTH, []);
+
+    // trigger again to flip the ordering
+    // XXX: is there some better way to do this?
+    if (mySorting < 0) {
+      sorttable.innerSortFunction.apply(myTH, []);
+    }
+  }
 }
 
 function getIndexLink() {

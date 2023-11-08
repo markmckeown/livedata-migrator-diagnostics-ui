@@ -829,25 +829,31 @@ def process_file_impl(workspace, filepath, filename):
     with open_file(filename) as fh:
         line_num = 0
         schema_translator = SchemaTranslator()
+        try:
+            for line in fh:
+                line_num += 1
+                try:
+                    row = schema_translator.translate(json.loads(line[25:]))
+                    obv = ObservationsForTimestamp(
+                        row["timeStamp"], row["collectionTime"]
+                    )
 
-        for line in fh:
-            line_num += 1
-            try:
-                row = schema_translator.translate(json.loads(line[25:]))
+                    # fill ObservationsForTimestamp with the relevant info for this
+                    # timestamp.
+                    for i, diagnostic in enumerate(row["diagnostics"]):
+                        obv.add(diagnostic)
 
-                obv = ObservationsForTimestamp(row["timeStamp"], row["collectionTime"])
-
-                # fill ObservationsForTimestamp with the relevant info for this
-                # timestamp.
-                for i, diagnostic in enumerate(row["diagnostics"]):
-                    obv.add(diagnostic)
-
-                observations.append(obv.fix())
-                workspace.writeDiagnostic(row)
-            except Exception as e:
-                # TODO - add logging and make this debug.
-                sys.stderr.write(traceback.format_exc())
-                sys.stderr.write("    Skipping line %d [%s]\n" % (line_num, str(e)))
+                    observations.append(obv.fix())
+                    workspace.writeDiagnostic(row)
+                except Exception as e:
+                    # Corrupt diagnostics
+                    # TODO - add logging and make this debug.
+                    sys.stderr.write(traceback.format_exc())
+                    sys.stderr.write("    Skipping line %d [%s]\n" % (line_num, str(e)))
+        except Exception as e:
+            # Corruption reading file
+            sys.stderr.write(traceback.format_exc())
+            sys.stderr.write("    Corrupt file %s\n" % (filename))
 
     return filename, observations
 
@@ -1056,6 +1062,9 @@ def find_diagnostic_files(path):
     diagnostic_files = []
     for root, dirnames, filenames in os.walk(path):
         for file in fnmatch.filter(filenames, DIAGNOSTIC_LOG_FILE_PATTERN):
+            # Ignore partially written log files.
+            if file.endswith("tmp"):
+                continue
             diagnostic_files.append(os.path.join(root, file))
     return diagnostic_files
 

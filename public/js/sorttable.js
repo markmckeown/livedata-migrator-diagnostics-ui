@@ -30,6 +30,7 @@ sorttable = {
     if (!document.createElement || !document.getElementsByTagName) return;
 
     sorttable.DATE_RE = /^(\d\d?)[\/\.-](\d\d?)[\/\.-]((\d\d)?\d\d)$/;
+    sorttable.SORTED_CALLBACK = function(colIndex) {};
 
     forEach(document.getElementsByTagName('table'), function(table) {
       if (table.className.search(/\bsortable\b/) != -1) {
@@ -37,6 +38,10 @@ sorttable = {
       }
     });
 
+  },
+
+  attachOnSorted: function(callback) {
+    sorttable.SORTED_CALLBACK = callback;
   },
 
   makeSortable: function(table) {
@@ -102,6 +107,7 @@ sorttable = {
             sortrevind.id = "sorttable_sortrevind";
             sortrevind.innerHTML = stIsIE ? '&nbsp<font face="webdings">5</font>' : '&nbsp;&#x25B4;';
             this.appendChild(sortrevind);
+            sorttable.SORTED_CALLBACK(this.sorttable_columnindex);
             return;
           }
           if (this.className.search(/\bsorttable_sorted_reverse\b/) != -1) {
@@ -115,6 +121,7 @@ sorttable = {
             sortfwdind.id = "sorttable_sortfwdind";
             sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
             this.appendChild(sortfwdind);
+            sorttable.SORTED_CALLBACK(this.sorttable_columnindex);
             return;
           }
 
@@ -144,6 +151,8 @@ sorttable = {
 	        row_array = [];
 	        col = this.sorttable_columnindex;
 	        rows = this.sorttable_tbody.rows;
+	        sorttable.SORTED_CALLBACK(col);
+
 	        for (var j=0; j<rows.length; j++) {
 	          row_array[row_array.length] = [sorttable.getInnerText(rows[j].cells[col]), rows[j]];
 	        }

@@ -23,6 +23,7 @@
  <a id="migrations-link" href="migrations.html">Migrations</a>
  <a id="eventstream-link" href="eventstream.html">Event Stream</a>
  <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
+ <a style="float: right; padding: 9px 9px;" id="share-link" href="#"><img src="share-fill.png" /></a>
 </div>
 
 <div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
@@ -831,7 +832,7 @@ function processFileTrackerTable(diagnostic, index, migration) {
       let endTime = timeStamp > fileTracker.LastUpdate ? timeStamp : fileTracker.LastUpdate;
       time = endTime - fileTracker.StartTime;
     }
-    text += "<tr onclick=\"location.href=\'" + getFileLink(fileTracker.Path) + "\';\"  style=\"cursor: pointer;\">"
+    text += "<tr onclick=\"location.href=getFileLink('"+ fileTracker.Path + "');\"  style=\"cursor: pointer;\">"
     text += "<td>" + fileTracker.Path + "</td><td>" + new Date(fileTracker.StartTime).toISOString().slice(0,-8)  + "</td>"
     text += "<td title=\"" + msToTime(time)  + "\">" + time.toLocaleString("en-US")  + "</td>"
     text += "<td title=\"" + humanFileSize(fileTracker.FileLength) + "\">" + fileTracker.FileLength.toLocaleString("en-US")  +"</td>"
@@ -846,7 +847,7 @@ function processFileTrackerTable(diagnostic, index, migration) {
   if (count > 0 ) { 
      document.getElementById("fileTracker-table").innerHTML = text;
      var newTableObject = document.getElementById("fileTracker-table");
-     sorttable.makeSortable(newTableObject);
+     makeSortable("mig", sorttable, newTableObject);
   }
 
   document.getElementById("transfer-count").innerHTML = count + " Active File Transfers at " 
@@ -912,7 +913,13 @@ async function getDiagnostic(migration) {
 
 const urlParams = new URLSearchParams(window.location.search);
 const migration_name = urlParams.get('migration');
-getMigrationTimeSeries(migration_name)
+getMigrationTimeSeries(migration_name);
+
+var button = document.getElementById("share-link");
+button.addEventListener("click",function(e){
+    copyLink(getMigrationLink(migration_name));
+    button.disabled = "true";
+},false);
 
 </script>
 </body>

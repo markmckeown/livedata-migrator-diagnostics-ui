@@ -22,7 +22,8 @@
     <a id="network-link" href="network.html">Network</a>
     <a id="migrations-link" href="migrations.html">Migrations</a>
     <a id="eventstream-link" href="eventstream.html">Event Stream</a>
-    <a id="filetrackers-link" href="filetrackers.html"  style="background-color: #FED8B1;">Transfers</a>
+    <a id="filetrackers-link" class="nav_active" href="filetrackers.html"  style="background-color: #FED8B1;">Transfers</a>
+    <a style="float: right; padding: 9px 9px;" id="share-link" href="javascript:copyLink(getFileTrackerLink());"><img src="share-fill.png" /></a>
 </div>
 
 <div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
@@ -31,7 +32,11 @@
       </div>
       <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
       <div style="text-align:center">
-         <h3><span id="transfer-count"></span><span></h3>
+         <h3><span id="transfer-count"></span></h3>
+      </div>
+      <div style="text-align:center">
+         <h5>File Size Deciles: <span id="fileSize-percentiles"></span></h5>
+         <h5>File Rate Deciles: <span id="fileRate-percentiles"></span></h5>
       </div>
       <div style="overflow-x:auto;">
         <table id="fileTracker-table"></table>
@@ -181,6 +186,9 @@ function processFileTrackerTable(diagnostic, index) {
      text += "<th style=\"cursor: pointer;\">Latency (s)</th>"
   }
   text +=  "<th style=\"cursor: pointer;\">Transferred</th><th style=\"cursor: pointer;\">Attempt</th><th style=\"cursor: pointer;\">Complete</th><th style=\"cursor: pointer;\">Bytes/s</th></tr>";  
+
+  let fileSizes = [];
+  let fileRate = [];
   for (let i in diagnostic.fileTrackers) {
     let fileTracker = diagnostic.fileTrackers[i];
     let time = 0;
@@ -191,7 +199,7 @@ function processFileTrackerTable(diagnostic, index) {
       let endTime = timeStamp > fileTracker.LastUpdate ? timeStamp : fileTracker.LastUpdate;
       time = endTime - fileTracker.StartTime;
     }
-    text += "<tr onclick=\"location.href=\'" + getFileLink(fileTracker.Path) + "\';\"  style=\"cursor: pointer;\">"
+    text += "<tr onclick=\"location.href=getFileLink('"+ fileTracker.Path + "');\"  style=\"cursor: pointer;\">"
     text += "<td>" + fileTracker.Path + "</td><td>" + new Date(fileTracker.StartTime).toISOString().slice(0,-5)  + "</td>"
     text += "<td title=\"" + msToTime(time)  + "\">" + time.toLocaleString("en-US")  + "</td>"
     text += "<td title=\"" + humanFileSize(fileTracker.FileLength) + "\">" + fileTracker.FileLength.toLocaleString("en-US")  +"</td>"
@@ -202,10 +210,52 @@ function processFileTrackerTable(diagnostic, index) {
     text += "<td>" + fileTracker.AttemptCount + "</td>"
     text += "<td>" + fileTracker.IsComplete  + "</td>"
     text += "<td title=\"" + toMBSecond(fileTracker.BytesPerSecond) + " Mbs\">" + fileTracker.BytesPerSecond.toLocaleString("en-US") + "</td></tr>";
+
+    fileSizes.push(fileTracker.FileLength);
+    fileRate.push(fileTracker.BytesPerSecond);
   }
+
+  document.getElementById("fileSize-percentiles").innerHTML
+      = getFileSizeDecilesSummary(fileSizes);
+
+  document.getElementById("fileRate-percentiles").innerHTML
+      = getFileRateDecilesSummary(fileRate);
+
   document.getElementById("fileTracker-table").innerHTML = text;
   var newTableObject = document.getElementById("fileTracker-table");
-  sorttable.makeSortable(newTableObject);
+  makeSortable("fil", sorttable, newTableObject);
+}
+
+function getFileDeciles(fileSizes) {
+  let range = [];
+  for (var i=10; i <= 100; i += 10){
+    range.push(i);
+  }
+  return percentile(range, fileSizes);
+}
+
+function getFileSizeDecilesSummary(fileSizes) {
+  var fileSizeDeciles = getFileDeciles(fileSizes);
+
+  var i = 0;
+  var rows = [];
+  while (i < fileSizeDeciles.length) {
+     rows.push(humanFileSize(fileSizeDeciles[i]));
+     i++;
+  } 
+  return rows.join(", ");
+}
+
+function getFileRateDecilesSummary(fileRate) {
+  var fileRateDeciles = getFileDeciles(fileRate);
+
+  var i = 0;
+  var rows = [];
+  while (i < fileRateDeciles.length) {
+     rows.push(toMBSecond(fileRateDeciles[i]) + " Mbs");
+     i++;
+  } 
+  return rows.join(", ");
 }
 
 function processDiagnostic(json, index) {

@@ -33,6 +33,7 @@
     <a id="migrations-link" href="migrations.html">Migrations</a>
     <a id="eventstream-link" href="eventstream.html">Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
+    <a style="float: right; padding: 9px 9px;" id="share-link" href="#"><img src="share-fill.png" /></a>
 </div>
 
 <div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
@@ -215,8 +216,10 @@ function processTransferTable(fileTracker, diagnosticTimeStamp, migrationName) {
   }
   text += "<tr><th>Transferred Bytes / File Size</th><td>" + humanFileSize(fileTracker.BytesTransferred, true) + 
            " / " + humanFileSize(fileTracker.FileLength, true) + " ("  + percentageDone  + "%)</td></tr>";	
-  let maxMbitSecond = mibPerS.reduce((a, b) => Math.max(a, b), -Infinity);
-  text += "<tr><th>Average Transfer Rate (Max)</th><td>" + Math.floor(toMBSecond(fileTracker.BytesPerSecond)) + " Mbit/s (" +   maxMbitSecond   + " Mbit/s)</td></tr>";	
+  if (!fileTracker.IsComplete) {
+     let maxMbitSecond = mibPerS.reduce((a, b) => Math.max(a, b), -Infinity);
+     text += "<tr><th>Average Transfer Rate (Max)</th><td>" + Math.floor(toMBSecond(fileTracker.BytesPerSecond)) + " Mbit/s (" +   maxMbitSecond   + " Mbit/s)</td></tr>";	
+  }
   text += "<tr><th title=\"There may be more than one attempt to transfer the file if there was a previous failure transferring it.\">Transfer Attempts</th><td>" + fileTracker.AttemptCount + "</td></tr>";	
   text += "</table>";	
   document.getElementById("transfer-table").innerHTML = text;
@@ -247,7 +250,7 @@ function processDiagnostic(json, path){
 function processDiagnosticForFileTransfer(fileTracker, diagnosticTimeStamp) {
   if (fileTracker.IsComplete) {
     // Complete transfers cannot be plotted
-    document.getElementById("chart-slider-container").style.display = "none";	  
+    document.getElementById("transfer-slider").style.display = "none";	  
     document.getElementById("chart-container").style.display = "none";	  
     return;	  
   }	  
@@ -392,6 +395,12 @@ function plotFileTransferGraph(fileTracker, seconds, bytesForSecond, startIndex,
 function localReWriteLinks() {
   let [startTimestamp, middleTimestamp, endTimestamp] = getPageDateRange();
   baseQuery = "?start=" + startTimestamp + "&middle=" + middleTimestamp + "&end=" + endTimestamp;
+
+  let sortBy = buildSortBy(null);
+  if (sortBy) {
+    baseQuery = baseQuery + "&sortBy=" + sortBy;
+  }
+
   document.getElementById('index-link').href = "index.html" + baseQuery;
   document.getElementById('throughput-link').href = "throughput.html" + baseQuery;
   document.getElementById('system-link').href = "system.html" + baseQuery;
@@ -411,6 +420,14 @@ const urlParams = new URLSearchParams(window.location.search);
 filePath = urlParams.get('path');
 pageIndex = localReWriteLinks();
 getDiagnostic(pageIndex, filePath);
+
+var button = document.getElementById("share-link");
+button.addEventListener("click",function(e){
+    shareLink(window.location.href);
+    button.disabled = "true";
+},false);
+
+
 
 </script>
 </body>
