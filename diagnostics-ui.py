@@ -1327,6 +1327,11 @@ def main():
     parser.add_argument("files", nargs="*")
     args = parser.parse_args()
 
+    # if no args print README and exit
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+
     # First do some args sanity.
     process_args(args)
 

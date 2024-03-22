@@ -1,6 +1,6 @@
 # LiveData Migrator Diagnostics UI
 
-Script will parse LiveData Migrator diagnostic logs and 
+Script will parse LiveData Migrator diagnostic logs and
 talkbacks and create a UI.
 
 ```
@@ -38,13 +38,13 @@ python3 diagnostics-ui.py --ingest diag-set-1 --serve talkback-LIVEDATA_MIGRATOR
 To process a talkback and start web server, diagnostic set will be identified as talkback-LIVEDATA_MIGRATOR-20230509113117-diag.wandisco.com as --ingress is not set
 
 ```
-python3 diagnostics-ui.py --serve --tarball talkback-LIVEDATA_MIGRATOR-20230509113117-diag.wandisco.com.tar.gz 
+python3 diagnostics-ui.py --serve --tarball talkback-LIVEDATA_MIGRATOR-20230509113117-diag.wandisco.com.tar.gz
 ```
 
 To start the web server and server existing data sets:
 
 ```
-python3 diagnostics-ui.py
+python3 diagnostics-ui.py --serve
 ```
 
 By default directory used to store files is python.workspace in the current working directory.
