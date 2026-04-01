@@ -14,19 +14,19 @@
 
 <body>
 <!-- Navbar -->
-<div class="topnav">
+<nav class="topnav">
     <a id="index-link", href="index.html">Summary</a>
     <a id="throughput-link", href="throughput.html">Throughput</a>
-    <a id="system-link" class="nav_active" href="system.html"  style="background-color: #FED8B1;">System</a>
+    <a id="system-link" class="nav_active" href="system.html"  >System</a>
     <a id="network-link" href="network.html">Network</a>
     <a id="migrations-link" href="migrations.html">Migrations</a>
     <a id="eventstream-link" href="eventstream.html">Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
     <a style="float: right; padding: 9px 9px;" id="share-link" href="javascript:copyLink(getSystemLink());"><img src="share-fill.png" /></a>
-</div>
+</nav>
 
-<div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
-    <div class="charts-wrapper">
+<main class="content">
+    <div class="charts-wrapper two-column-charts">
       <div>
         <canvas id="SystemCPUChart" height="400"></canvas>
       </div>
@@ -40,37 +40,37 @@
         <canvas id="EventManagerDBChart" height="400"></canvas>
       </div>
     </div>
-    <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
+    <div class="slider-container" id="slider"></div>
 </div>
 
 
 <script>
-var processCpuLoad;
-var systemCpuLoad;
-var eventManagerMeanDbTime;
-var eventManagerMaxDbTime;
-var iowaitPercentage;
-var gcTimeForPeriod;
-var gcAverageTime;
+let processCpuLoad;
+let systemCpuLoad;
+let eventManagerMeanDbTime;
+let eventManagerMaxDbTime;
+let iowaitPercentage;
+let gcTimeForPeriod;
+let gcAverageTime;
 
 // Charts
-var cpuChart;
-var eventManagerDBChart;
-var ioWaitChart;
-var gcChart;
+let cpuChart;
+let eventManagerDBChart;
+let ioWaitChart;
+let gcChart;
 
 // Sliders
-var slider = document.getElementById('slider');
+let slider = document.getElementById('slider');
 
-function onSliderUpdate() {
+const onSliderUpdate = function() {
 }
 
-function onSliderChange() {
+const onSliderChange = function() {
    redrawChart(); 
    reWriteLinks();
 }
 
-function setMinZero(value, index, array) {
+const setMinZero = function(value, index, array) {
   if (value < 0.0) {
     return 0.0;
   } else {
@@ -79,7 +79,7 @@ function setMinZero(value, index, array) {
 }
 
 
-function doSystemCPUChart(systemCPU, startIndex, middleIndex, endIndex) {
+const doSystemCPUChart = function(systemCPU, startIndex, middleIndex, endIndex) {
   processCpuLoad = systemCPU.processCpuLoad;
   systemCpuLoad = systemCPU.systemCpuLoad;
 
@@ -90,7 +90,9 @@ function doSystemCPUChart(systemCPU, startIndex, middleIndex, endIndex) {
       datasets: [{
         label: "Process CPU Load",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: processCpuLoad.slice(startIndex, endIndex),
@@ -99,7 +101,9 @@ function doSystemCPUChart(systemCPU, startIndex, middleIndex, endIndex) {
       {
         label: "System CPU Load",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: systemCpuLoad.slice(startIndex, endIndex),
@@ -109,7 +113,16 @@ function doSystemCPUChart(systemCPU, startIndex, middleIndex, endIndex) {
     options: {
       maintainAspectRatio: false,
       responsive: true,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
         annotation: {
           annotations: {
             line1: {
@@ -129,6 +142,7 @@ function doSystemCPUChart(systemCPU, startIndex, middleIndex, endIndex) {
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -143,6 +157,7 @@ function doSystemCPUChart(systemCPU, startIndex, middleIndex, endIndex) {
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0.0,
@@ -154,14 +169,13 @@ function doSystemCPUChart(systemCPU, startIndex, middleIndex, endIndex) {
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0.0,
           max: 1.0,
           position: 'right', 
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           title: {
             display: true,
             text: 'System CPU Load'
@@ -172,7 +186,7 @@ function doSystemCPUChart(systemCPU, startIndex, middleIndex, endIndex) {
   });
 }
 
-function doEventManagerDBChart(eventManagerDBJson, startIndex, middleIndex, endIndex) {
+const doEventManagerDBChart = function(eventManagerDBJson, startIndex, middleIndex, endIndex) {
   eventManagerMeanDbTime = eventManagerDBJson.eventManagerMeanDbTime;
   eventManagerMaxDbTime = eventManagerDBJson.eventManagerMaxDbTime;
 
@@ -183,7 +197,9 @@ function doEventManagerDBChart(eventManagerDBJson, startIndex, middleIndex, endI
       datasets: [{
         label: "Event Manager Mean DB Write Time",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: eventManagerMeanDbTime.slice(startIndex, endIndex),
@@ -192,7 +208,9 @@ function doEventManagerDBChart(eventManagerDBJson, startIndex, middleIndex, endI
       {
         label: "Event Manager Max DB Write Time",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: eventManagerMaxDbTime.slice(startIndex, endIndex),
@@ -202,7 +220,16 @@ function doEventManagerDBChart(eventManagerDBJson, startIndex, middleIndex, endI
     options: {
       maintainAspectRatio: false,
       responsive: true,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
          annotation: {
           annotations: {
             line1: {
@@ -222,6 +249,7 @@ function doEventManagerDBChart(eventManagerDBJson, startIndex, middleIndex, endI
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -236,6 +264,7 @@ function doEventManagerDBChart(eventManagerDBJson, startIndex, middleIndex, endI
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0.0,
@@ -246,13 +275,12 @@ function doEventManagerDBChart(eventManagerDBJson, startIndex, middleIndex, endI
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'logarithmic',
           min: 0.0,
           position: 'right', 
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           title: {
             display: true,
             text: 'Max Write Time'
@@ -263,7 +291,7 @@ function doEventManagerDBChart(eventManagerDBJson, startIndex, middleIndex, endI
   });
 }
 
-function doSystemIOwaitChart(systemIOwait, startIndex, middleIndex, endIndex) {
+const doSystemIOwaitChart = function(systemIOwait, startIndex, middleIndex, endIndex) {
   iowaitPercentage = systemIOwait.ioWaitPercentage.map(setMinZero);
 
   ioWaitChart = new Chart("SystemIOwaitChart", {
@@ -273,7 +301,9 @@ function doSystemIOwaitChart(systemIOwait, startIndex, middleIndex, endIndex) {
       datasets: [{
         label: "IO Wait Percentage",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: iowaitPercentage.slice(startIndex, endIndex),
@@ -282,7 +312,16 @@ function doSystemIOwaitChart(systemIOwait, startIndex, middleIndex, endIndex) {
     options: {
       maintainAspectRatio: false,
       responsive: true,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
          annotation: {
           annotations: {
             line1: {
@@ -302,6 +341,7 @@ function doSystemIOwaitChart(systemIOwait, startIndex, middleIndex, endIndex) {
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -316,6 +356,7 @@ function doSystemIOwaitChart(systemIOwait, startIndex, middleIndex, endIndex) {
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0.0,
@@ -330,7 +371,7 @@ function doSystemIOwaitChart(systemIOwait, startIndex, middleIndex, endIndex) {
 }
 
 
-function doJvmGCChart(jvmGC, startIndex, middleIndex, endIndex) {
+const doJvmGCChart = function(jvmGC, startIndex, middleIndex, endIndex) {
   gcTimeForPeriod = jvmGC.gcTimeForPeriod;
   gcAverageTime = jvmGC.gcAverageTime;
 
@@ -341,7 +382,9 @@ function doJvmGCChart(jvmGC, startIndex, middleIndex, endIndex) {
       datasets: [{
         label: "JVM GC Average Time (ms)",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: gcAverageTime.slice(startIndex, endIndex),
@@ -350,7 +393,9 @@ function doJvmGCChart(jvmGC, startIndex, middleIndex, endIndex) {
       {
         label: "JVM GC Time (ms) for period.",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: gcTimeForPeriod.slice(startIndex, endIndex),
@@ -360,7 +405,16 @@ function doJvmGCChart(jvmGC, startIndex, middleIndex, endIndex) {
     options: {
       maintainAspectRatio: false,
       responsive: true,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
          annotation: {
           annotations: {
             line1: {
@@ -380,6 +434,7 @@ function doJvmGCChart(jvmGC, startIndex, middleIndex, endIndex) {
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -394,6 +449,7 @@ function doJvmGCChart(jvmGC, startIndex, middleIndex, endIndex) {
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -404,13 +460,12 @@ function doJvmGCChart(jvmGC, startIndex, middleIndex, endIndex) {
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'right', 
           min: 0.0,
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           title: {
             display: true,
             text: 'JVM GC Time for Period'
@@ -423,7 +478,7 @@ function doJvmGCChart(jvmGC, startIndex, middleIndex, endIndex) {
 
 
 
-function redrawChart() {
+const redrawChart = function() {
   let startIndex =  diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start);
   let endIndex = diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.end);
 
@@ -472,7 +527,7 @@ function redrawChart() {
   }
 }
 
-function onChartClick(clickedElementindex) {
+const onChartClick = function(clickedElementindex) {
     diagnosticsTimeSeries.middle =
        diagnosticsTimeSeries.dates[
          diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
@@ -483,39 +538,39 @@ function onChartClick(clickedElementindex) {
 }
 
 document.getElementById("SystemCPUChart").onclick = function(evt) {
-  var activePoint = cpuChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = cpuChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex);
   }
 };
 
 document.getElementById("SystemIOwaitChart").onclick = function(evt) {
-  var activePoint = ioWaitChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = ioWaitChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex);
   }
 };
 
 document.getElementById("JvmGCChart").onclick = function(evt) {
-  var activePoint = gcChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = gcChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex);
   }
 };
 
 
 document.getElementById("EventManagerDBChart").onclick = function(evt) {
-  var activePoint = eventManagerDBChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = eventManagerDBChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex);
   }
 };
 
-async function getEventManagerWriteTimes() {
+const getEventManagerWriteTimes = async function() {
   try {
     let json = await loadReport('db_diagnostics.gz');
     doEventManagerDBChart(json,
@@ -528,7 +583,7 @@ async function getEventManagerWriteTimes() {
   }
 }
 
-async function getSystemIOwait() {
+const getSystemIOwait = async function() {
   try {
     let json = await loadReport('iowaitpercentage.gz');
     doSystemIOwaitChart(json,
@@ -541,7 +596,7 @@ async function getSystemIOwait() {
   }
 }
 
-async function getSystemCPU() {
+const getSystemCPU = async function() {
   try {
     let json = await loadReport('systemCPU.gz');
     doSystemCPUChart(json,
@@ -554,7 +609,7 @@ async function getSystemCPU() {
   }
 }
 
-async function getJvmGCTime() {
+const getJvmGCTime = async function() {
   try {
     let json = await loadReport('jvmGC.gz');
     generateDiagnosticTimeSeries(json.timeStamp);

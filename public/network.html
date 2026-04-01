@@ -15,20 +15,20 @@
 
 <body>
 <!-- Navbar -->
-<div class="topnav">
+<nav class="topnav">
     <a id="index-link", href="index.html">Summary</a>
     <a id="throughput-link", href="throughput.html">Throughput</a>
     <a id="system-link" href="system.html">System</a>
-    <a id="network-link" class="nav_active" href="network.html" style="background-color: #FED8B1;">Network</a>
+    <a id="network-link" class="nav_active" href="network.html" >Network</a>
     <a id="migrations-link" href="migrations.html">Migrations</a>
     <a id="eventstream-link" href="eventstream.html">Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
     <a style="float: right; padding: 9px 9px;" id="share-link" href="javascript:copyLink(getNetworkLink());"><img src="share-fill.png" /></a>
-</div>
+</nav>
 
 <!-- !PAGE CONTENT! -->
-<div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
-    <div class="charts-wrapper">
+<main class="content">
+    <div class="charts-wrapper two-column-charts">
        <div>
          <canvas id="ConnectionCountChart" height="400"></canvas>
        </div>
@@ -42,8 +42,8 @@
          <canvas id="ConnectionTxBufferChart" height="400"></canvas>
        </div>
     </div>
-    <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
-    <div style="text-align:center">
+    <div class="slider-container" id="slider"></div>
+    <div class="text-center">
        <h4><span id="connection-count">0</span> Established Connections at <span id="connection-table-time"></span> (<span id="connection-count-with-tx">0</span> with Tx, <span id="connection-count-with-rx">0</span> with Rx)</h4>
     </div>
     <div>
@@ -53,22 +53,22 @@
 
 <script>
 //Datasets
-var tx;
-var rx;
-var count;
-var retrnsmt;
-var bytesPerSecond;
+let tx;
+let rx;
+let count;
+let retrnsmt;
+let bytesPerSecond;
 
 //Charts
-var connectionTxBufferChart;
-var connectionRxBufferChart;
-var connectionCountChart;
-var connectionRetransmitChart;
+let connectionTxBufferChart;
+let connectionRxBufferChart;
+let connectionCountChart;
+let connectionRetransmitChart;
 
 //Slider
-var slider = document.getElementById('slider');
+let slider = document.getElementById('slider');
 
-function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIndex) {
+const doConnectionTxBufferChart = function(networkStatus, startIndex, middleIndex, endIndex) {
   connectionTxBufferChart = new Chart("ConnectionTxBufferChart", {
     type: "line",
     data: {
@@ -76,7 +76,9 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
       datasets: [{
         label: "OS Tx Buffer Size",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: tx.slice(startIndex, endIndex),
@@ -86,7 +88,9 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
         label: "Mbit/s",
         fill: false,
 	display: true,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: bytesPerSecond.slice(startIndex, endIndex),
@@ -94,12 +98,12 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
+                  plugins: {
          annotation: {
           annotations: {
             line1: {
@@ -117,6 +121,13 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
           text: "OS Total Connection Tx Buffer Sizes"
         },
         tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
            callbacks: {
             label: function(context) {
               let label = context.dataset.label || '';
@@ -135,6 +146,7 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -149,6 +161,7 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0.0,
@@ -163,12 +176,11 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'right', 
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           min: 0.0,
           title: {
             display: false,
@@ -180,7 +192,7 @@ function doConnectionTxBufferChart(networkStatus, startIndex, middleIndex, endIn
   });
 }
 
-function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIndex) {
+const doConnectionRxBufferChart = function(networkStatus, startIndex, middleIndex, endIndex) {
 
   connectionRxBufferChart = new Chart("ConnectionRxBufferChart", {
     type: "line",
@@ -189,7 +201,9 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
       datasets: [{
         label: "OS Rx Buffer Size",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: rx.slice(startIndex, endIndex),
@@ -198,7 +212,9 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
         label: "Mbit/s",
         fill: false,
 	display: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: bytesPerSecond.slice(startIndex, endIndex),
@@ -206,12 +222,12 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
+                  plugins: {
          annotation: {
           annotations: {
             line1: {
@@ -229,6 +245,13 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
           text: "OS Total Connection Rx Buffer Sizes"
         },
         tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
            callbacks: {
             label: function(context) {
               let label = context.dataset.label || '';
@@ -247,6 +270,7 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -261,6 +285,7 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0.0,
@@ -275,12 +300,11 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'right', 
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           min: 0.0,
           title: {
             display: false,
@@ -292,7 +316,7 @@ function doConnectionRxBufferChart(networkStatus, startIndex, middleIndex, endIn
   });
 }
 
-function doConnectionCountChart(networkStatus, startIndex, middleIndex, endIndex) {
+const doConnectionCountChart = function(networkStatus, startIndex, middleIndex, endIndex) {
   connectionCountChart = new Chart("ConnectionCountChart", {
     type: "line",
     data: {
@@ -300,7 +324,9 @@ function doConnectionCountChart(networkStatus, startIndex, middleIndex, endIndex
       datasets: [{
         label: "Connection Count",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: count.slice(startIndex, endIndex),
@@ -309,7 +335,9 @@ function doConnectionCountChart(networkStatus, startIndex, middleIndex, endIndex
         label: "Mbit/s",
         fill: false,
 	display: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: bytesPerSecond.slice(startIndex, endIndex),
@@ -317,12 +345,21 @@ function doConnectionCountChart(networkStatus, startIndex, middleIndex, endIndex
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
          annotation: {
           annotations: {
             line1: {
@@ -342,6 +379,7 @@ function doConnectionCountChart(networkStatus, startIndex, middleIndex, endIndex
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -356,6 +394,7 @@ function doConnectionCountChart(networkStatus, startIndex, middleIndex, endIndex
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0.0,
@@ -365,12 +404,11 @@ function doConnectionCountChart(networkStatus, startIndex, middleIndex, endIndex
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: false,
           type: 'linear',
           position: 'right', 
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           min: 0.0,
           title: {
             display: false,
@@ -382,7 +420,7 @@ function doConnectionCountChart(networkStatus, startIndex, middleIndex, endIndex
   });
 }
 
-function doConnectionRetransmitChart(networkStatus, startIndex, middleIndex, endIndex) {
+const doConnectionRetransmitChart = function(networkStatus, startIndex, middleIndex, endIndex) {
 
   connectionRetransmitChart = new Chart("ConnectionRetransmitChart", {
     type: "line",
@@ -391,7 +429,9 @@ function doConnectionRetransmitChart(networkStatus, startIndex, middleIndex, end
       datasets: [{
         label: "Retransmit Count",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: retrnsmt.slice(startIndex, endIndex),
@@ -400,7 +440,9 @@ function doConnectionRetransmitChart(networkStatus, startIndex, middleIndex, end
         label: "Mbit/s",
         fill: false,
 	display: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         data: bytesPerSecond.slice(startIndex, endIndex),
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
@@ -408,12 +450,21 @@ function doConnectionRetransmitChart(networkStatus, startIndex, middleIndex, end
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
          annotation: {
           annotations: {
             line1: {
@@ -433,6 +484,7 @@ function doConnectionRetransmitChart(networkStatus, startIndex, middleIndex, end
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -447,6 +499,7 @@ function doConnectionRetransmitChart(networkStatus, startIndex, middleIndex, end
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0.0,
@@ -456,12 +509,11 @@ function doConnectionRetransmitChart(networkStatus, startIndex, middleIndex, end
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: false,
           type: 'linear',
           position: 'right', 
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           min: 0.0,
           title: {
             display: false,
@@ -474,7 +526,7 @@ function doConnectionRetransmitChart(networkStatus, startIndex, middleIndex, end
 }
 
 
-function processConnectionTable(diagnostic) {
+const processConnectionTable = function(diagnostic) {
   let text = "<tr><th style=\"cursor: pointer;\">Local Address</th><th style=\"cursor: pointer;\">Local Port</th><th style=\"cursor: pointer;\">Remote Address</th><th style=\"cursor: pointer;\">Remote Port</th><th style=\"cursor: pointer;\">Tx Buffer</th><th style=\"cursor: pointer;\">Rx Buffer</th><th style=\"cursor: pointer;\">Retransmit</th></tr>";
   let txCnt = 0;
   let rxCnt = 0;
@@ -495,7 +547,7 @@ function processConnectionTable(diagnostic) {
     }
   }
   document.getElementById("connection-table").innerHTML = text;
-  var newTableObject = document.getElementById("connection-table");
+  let newTableObject = document.getElementById("connection-table");
   makeSortable("net", sorttable, newTableObject);
 
   return {
@@ -506,7 +558,7 @@ function processConnectionTable(diagnostic) {
 } 
 
 
-function processDiagnostic(json) {
+const processDiagnostic = function(json) {
   for (let j in json.diagnosticSet.diagnostics) {
     let diagnostic = json.diagnosticSet.diagnostics[j];
     if (diagnostic.type === 'NetworkStatusDTO') {
@@ -515,16 +567,16 @@ function processDiagnostic(json) {
   }
 }
 
-function onSliderUpdate() {
+const onSliderUpdate = function() {
 }
 
-function onSliderChange() {
+const onSliderChange = function() {
    redrawChart(); 
    reWriteLinks();
    getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
 }
 
-function onChartClick(clickedElementindex) {
+const onChartClick = function(clickedElementindex) {
    diagnosticsTimeSeries.middle =
        diagnosticsTimeSeries.dates[
          diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
@@ -537,47 +589,47 @@ function onChartClick(clickedElementindex) {
 
 
 document.getElementById("ConnectionCountChart").onclick = function(evt) {
-  var activePoint = connectionCountChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = connectionCountChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex);
   }
 };
 
 document.getElementById("ConnectionTxBufferChart").onclick = function(evt) {
-  var activePoint = connectionTxBufferChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = connectionTxBufferChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex);
   }
 };
 
 document.getElementById("ConnectionRxBufferChart").onclick = function(evt) {
-  var activePoint = connectionRxBufferChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = connectionRxBufferChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex);
   }
 };
 
 document.getElementById("ConnectionRetransmitChart").onclick = function(evt) {
-  var activePoint = connectionRetransmitChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = connectionRetransmitChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex);
   }
 };
 
 
-function resetAnnotations() {
+const resetAnnotations = function() {
   connectionTxBufferChart.options.plugins.annotation.annotations.line1.xMin =
            diagnosticsTimeSeries.middle;
   connectionTxBufferChart.options.plugins.annotation.annotations.line1.xMax =
@@ -605,9 +657,9 @@ function resetAnnotations() {
 }
 
 
-var oldStartIndex = -1;
-var oldEndIndex = -1;
-function redrawChart() {
+let oldStartIndex = -1;
+let oldEndIndex = -1;
+const redrawChart = function() {
   let startIndex =  diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start);
   let endIndex = diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.end);
 
@@ -655,8 +707,8 @@ function redrawChart() {
   connectionRetransmitChart.update();
 }
 
-var previousIndex = -1;
-async function getDiagnostic(index) {
+let previousIndex = -1;
+const getDiagnostic = async function(index) {
   try {
     if (previousIndex === index) {
        return;
@@ -674,7 +726,7 @@ async function getDiagnostic(index) {
   }
 }
 
-async function getNetworkStatus() {
+const getNetworkStatus = async function() {
   try {
     let json = await loadReport('network.gz');
     generateDiagnosticTimeSeries(json.timeStamp);

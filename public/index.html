@@ -15,8 +15,8 @@
 
 <body>
 <!-- Navbar -->
-<div class="topnav">
-    <a id="index-link", class="nav_active" href="index.html"  style="background-color: #FED8B1;">Summary</a>
+<nav class="topnav">
+    <a id="index-link", class="nav_active" href="index.html"  >Summary</a>
     <a id="throughput-link", href="throughput.html">Throughput</a>
     <a id="system-link" href="system.html">System</a>
     <a id="network-link" href="network.html">Network</a>
@@ -24,16 +24,16 @@
     <a id="eventstream-link" href="eventstream.html">Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
     <a style="float: right; padding: 9px 9px;" id="share-link" href="javascript:copyLink(getIndexLink());"><img src="share-fill.png" /></a>
-</div>
+</nav>
 
 
 
 <!-- !PAGE CONTENT! -->
-<div  style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
+<main class="content">
    <div>
          <canvas id="ThroughPutChart" height="400"></canvas>
    </div>
-   <div  style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
+   <div  class="slider-container" id="slider"></div>
 
    <div style="margin-left:100px;margin-top:50px;margin-right:100px">
       <table id="diagnostic-summary-table-0">   
@@ -144,30 +144,44 @@
 
    <div class="charts-wrapper">
       <div>
-        <canvas id="ActiveRatePercentiles"></canvas>
-        <form action=""><input type="button" style="display: block; margin: auto;" id="ActiveRatePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
+        <div style="position: relative; height: 400px; width: 100%;">
+          <canvas id="ActiveRatePercentiles"></canvas>
+        </div>
+        <form action="" style="margin-top: 10px;"><input type="button" style="display: block; margin: auto;" id="ActiveRatePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
       </div>
       <div>
-        <canvas id="ActiveFileSizePercentiles"></canvas>
-        <form action=""><input type="button" style="display: block; margin: auto;" id="ActiveFileSizePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
+        <div style="position: relative; height: 400px; width: 100%;">
+          <canvas id="ActiveFileSizePercentiles"></canvas>
+        </div>
+        <form action="" style="margin-top: 10px;"><input type="button" style="display: block; margin: auto;" id="ActiveFileSizePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
       </div>
       <div>
-        <canvas id="ActiveLatencyPercentiles"></canvas>
+        <div style="position: relative; height: 400px; width: 100%;">
+          <canvas id="ActiveLatencyPercentiles"></canvas>
+        </div>
       </div>
       <div>
-        <canvas id="ActiveMigrations"></canvas>
+        <div style="position: relative; height: 400px; width: 100%;">
+          <canvas id="ActiveMigrations"></canvas>
+        </div>
       </div>
       <div>
-        <canvas id="FileRatePercentiles"></canvas>
-        <form action=""><input type="button" style="display: block; margin: auto;" id="FileRatePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
+        <div style="position: relative; height: 400px; width: 100%;">
+          <canvas id="FileRatePercentiles"></canvas>
+        </div>
+        <form action="" style="margin-top: 10px;"><input type="button" style="display: block; margin: auto;" id="FileRatePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
       </div>
       <div>
-        <canvas id="FileSizePercentiles"></canvas>
-        <form action=""><input type="button" style="display: block; margin: auto;" id="FileSizePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
+        <div style="position: relative; height: 400px; width: 100%;">
+          <canvas id="FileSizePercentiles"></canvas>
+        </div>
+        <form action="" style="margin-top: 10px;"><input type="button" style="display: block; margin: auto;" id="FileSizePercentilesButton", onclick="changeScaleButton(this);", value="log"></button></form>
       </div>
    </div>
    <div>
-      <canvas id="RecentMigrations" height="600"></canvas>
+      <div style="position: relative; height: 600px; width: 100%;">
+        <canvas id="RecentMigrations"></canvas>
+      </div>
    </div>
    <div>
       <form action=""><input type="button" style="display: block; margin: auto;" id="RecentMigrationsButton", onclick="changeScaleButton(this);", value="log"></button></form>
@@ -179,30 +193,30 @@
 
 <script>
 // Datasets
-var activeFileTrackerPercentiles;
-var fileTrackerPercentiles;
-var fileTrackerRatePercentiles;
-var recentMigrations;
-var byterate;
-var filerate;
-var jvmGCTimeMap = {};
-var diagnosticDeltas;
+let activeFileTrackerPercentiles;
+let fileTrackerPercentiles;
+let fileTrackerRatePercentiles;
+let recentMigrations;
+let byterate;
+let filerate;
+let jvmGCTimeMap = {};
+let diagnosticDeltas;
 
 // Sliders
-var slider = document.getElementById('slider');
+let slider = document.getElementById('slider');
 
 // Charts
-var throughPutChart;
-var activeFileRateBarChart;
-var activeFileSizeBarChart;
-var activeFileLatencyBarChart;
-var activeMigrationsChart;
-var fileSizeBarChart;
-var fileRateBarChart;
-var recentMigrationsChart;
+let throughPutChart;
+let activeFileRateBarChart;
+let activeFileSizeBarChart;
+let activeFileLatencyBarChart;
+let activeMigrationsChart;
+let fileSizeBarChart;
+let fileRateBarChart;
+let recentMigrationsChart;
 
 
-function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
+const doThroughPutChart = function(throughput, startIndex, middleIndex, endIndex) {
   byterate = throughput.bytesPerSecond.map(toMBSecond);
   filerate = throughput.filesPerSecond;
 
@@ -213,7 +227,9 @@ function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
       datasets: [{
         label: "Mbit/s",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: byterate.slice(startIndex, endIndex),
@@ -222,7 +238,9 @@ function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
       {
         label: "Files Per Second",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: filerate.slice(startIndex, endIndex),
@@ -230,12 +248,21 @@ function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
       }]
     },
     options: {
-      responsive: true,
       maintainAspectRatio: false,
-      onHover: (event, chartElement) => {
+      responsive: true,
+                  onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
       plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
        annotation: {
           annotations: {
             line1: {
@@ -260,6 +287,7 @@ function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -274,6 +302,7 @@ function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -284,13 +313,12 @@ function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'right', 
           min: 0.0,
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           title: {
             display: true,
             text: 'Files per Second'
@@ -302,7 +330,7 @@ function doThroughPutChart(throughput, startIndex, middleIndex, endIndex) {
 }
 
 
-function updateThroughPutChart() {
+const updateThroughPutChart = function() {
   if (typeof throughPutChart === 'undefined') {
      return;
   }
@@ -321,7 +349,7 @@ function updateThroughPutChart() {
 }
 
 
-function changeScaleButton(button) {
+const changeScaleButton = function(button) {
   if (button.value === "log") {
     button.value = "linear";
   } else {
@@ -350,7 +378,7 @@ function changeScaleButton(button) {
   }
 }
 
-function getRecentMigrations(diagnosticSet) {
+const getRecentMigrations = function(diagnosticSet) {
   let diagnostic;
   for (let i in diagnosticSet.diagnostics) {
     diagnostic = diagnosticSet.diagnostics[i];
@@ -379,7 +407,7 @@ function getRecentMigrations(diagnosticSet) {
 }
 
 
-function processRecentActivityMigrations(recentMigrations) {
+const processRecentActivityMigrations = function(recentMigrations) {
   let scaleButton = document.getElementById("RecentMigrationsButton").value;  
   let scaleType = 'linear'
   if (scaleButton === "linear") {
@@ -402,10 +430,10 @@ function processRecentActivityMigrations(recentMigrations) {
   type: 'bar',
   data: data,
   options: {
+      maintainAspectRatio: false,
+      responsive: true,
     indexAxis: 'y',
-    responsive: true,
-    maintainAspectRatio: false,
-    onHover: (event, chartElement) => {
+            onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
     },
     scales : {
@@ -429,6 +457,13 @@ function processRecentActivityMigrations(recentMigrations) {
           },
       },
       tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
         callbacks: {
            title: function(context) {
               return context[0].label
@@ -444,8 +479,8 @@ function processRecentActivityMigrations(recentMigrations) {
  recentMigrationsChart = new Chart("RecentMigrations", config);
 } 
 
-function getFileSizePercentiles(json) {
-  var diagnostic;
+const getFileSizePercentiles = function(json) {
+  let diagnostic;
   let labels = [];
   let values = [];
   for (let j in json.diagnosticSet.diagnostics) {
@@ -462,8 +497,8 @@ function getFileSizePercentiles(json) {
   return {labels, values};
 }
 
-function getFileRatePercentiles(json) {
-  var diagnostic;
+const getFileRatePercentiles = function(json) {
+  let diagnostic;
   let labels = [];
   let values = [];
   for (let j in json.diagnosticSet.diagnostics) {
@@ -480,7 +515,7 @@ function getFileRatePercentiles(json) {
   return {labels, values};
 }
 
-function processFileRatePercentiles(precentiles) {
+const processFileRatePercentiles = function(precentiles) {
   let scaleButton = document.getElementById("FileRatePercentilesButton").value;  
   let scaleType = 'linear'
   if (scaleButton === "linear") {
@@ -502,12 +537,15 @@ function processFileRatePercentiles(precentiles) {
   type: 'bar',
   data: data,
   options: {
-    responsive: true,
-    scales: {
+      maintainAspectRatio: false,
+      responsive: true,
+        scales: {
       x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
         display: true,
       },
       y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
         display: true,
         type: scaleType,
       }
@@ -524,6 +562,13 @@ function processFileRatePercentiles(precentiles) {
           },
       },
       tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
         callbacks: {
           label: function(context) {
             let label = context.dataset.label || '';
@@ -549,7 +594,7 @@ function processFileRatePercentiles(precentiles) {
 
 
 
-function processFileSizePercentiles(precentiles) {
+const processFileSizePercentiles = function(precentiles) {
   let scaleButton = document.getElementById("FileSizePercentilesButton").value;  
   let scaleType = 'linear'
   if (scaleButton === "linear") {
@@ -571,12 +616,15 @@ function processFileSizePercentiles(precentiles) {
   type: 'bar',
   data: data,
   options: {
-    responsive: true,
-    scales: {
+      maintainAspectRatio: false,
+      responsive: true,
+        scales: {
       x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
         display: true,
       },
       y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
         display: true,
         type: scaleType,
       }
@@ -593,6 +641,13 @@ function processFileSizePercentiles(precentiles) {
           },
       },
       tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
         callbacks: {
           label: function(context) {
             let label = context.dataset.label || '';
@@ -616,7 +671,7 @@ function processFileSizePercentiles(precentiles) {
  fileSizeBarChart = new Chart("FileSizePercentiles", config);
 }
 
-function processActiveFileLatencyPercentiles(activeFileTrackerPercentiles) {
+const processActiveFileLatencyPercentiles = function(activeFileTrackerPercentiles) {
   const data = {
     labels: activeFileTrackerPercentiles.fileTrackerPercentileRange,
     datasets: [
@@ -632,8 +687,9 @@ function processActiveFileLatencyPercentiles(activeFileTrackerPercentiles) {
   type: 'bar',
   data: data,
   options: {
-    responsive: true,
-    plugins: {
+      maintainAspectRatio: false,
+      responsive: true,
+        plugins: {
       legend: {
         position: 'top',
       },
@@ -645,6 +701,13 @@ function processActiveFileLatencyPercentiles(activeFileTrackerPercentiles) {
           },
       },
       tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
         callbacks: {
           label: function(context) {
             let label = context.dataset.label || '';
@@ -669,9 +732,9 @@ function processActiveFileLatencyPercentiles(activeFileTrackerPercentiles) {
 }
 
 document.getElementById("ActiveMigrations").onclick = function(evt) {
-  var activePoint = activeMigrationsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+  let activePoint = activeMigrationsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
   if (activePoint.length > 0) {
-     var clickedElementindex = activePoint[0].index;
+     let clickedElementindex = activePoint[0].index;
      let migration_name = activeMigrationsChart.data.labels[clickedElementindex];
      uri = getMigrationLink(migration_name);
      window.location.href = uri;
@@ -679,9 +742,9 @@ document.getElementById("ActiveMigrations").onclick = function(evt) {
 }            
              
 document.getElementById("RecentMigrations").onclick = function(evt) {
-  var activePoint = recentMigrationsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);  
+  let activePoint = recentMigrationsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);  
   if (activePoint.length > 0) {
-     var clickedElementindex = activePoint[0].index;
+     let clickedElementindex = activePoint[0].index;
      let migration_name = recentMigrationsChart.data.labels[clickedElementindex];
      uri = getMigrationLink(migration_name);
      window.location.href = uri;
@@ -689,7 +752,7 @@ document.getElementById("RecentMigrations").onclick = function(evt) {
 }     
 
 
-function processActiveFileRatePercentiles(activeFileTrackerPercentiles) {
+const processActiveFileRatePercentiles = function(activeFileTrackerPercentiles) {
   let scaleButton = document.getElementById("ActiveRatePercentilesButton").value;  
   let scaleType = 'linear'
   if (scaleButton === "linear") {
@@ -711,12 +774,15 @@ function processActiveFileRatePercentiles(activeFileTrackerPercentiles) {
   type: 'bar',
   data: data,
   options: {
-    responsive: true,
-    scales: {
+      maintainAspectRatio: false,
+      responsive: true,
+        scales: {
       x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
         display: true,
       },
       y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
         display: true,
         type: scaleType,
       }
@@ -733,6 +799,13 @@ function processActiveFileRatePercentiles(activeFileTrackerPercentiles) {
           },
       },
       tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
         callbacks: {
           label: function(context) {
             let label = context.dataset.label || '';
@@ -757,7 +830,7 @@ function processActiveFileRatePercentiles(activeFileTrackerPercentiles) {
 }
 
 
-function processActiveFileSizePercentiles(activeFileTrackerPercentiles, timeStamp) {
+const processActiveFileSizePercentiles = function(activeFileTrackerPercentiles, timeStamp) {
   let scaleButton = document.getElementById("ActiveFileSizePercentilesButton").value;  
   let scaleType = 'linear'
   if (scaleButton === "linear") {
@@ -779,12 +852,15 @@ function processActiveFileSizePercentiles(activeFileTrackerPercentiles, timeStam
   type: 'bar',
   data: data,
   options: {
-    responsive: true,
-    scales: {
+      maintainAspectRatio: false,
+      responsive: true,
+        scales: {
       x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
         display: true,
       },
       y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
         display: true,
         type: scaleType,
       }
@@ -801,6 +877,13 @@ function processActiveFileSizePercentiles(activeFileTrackerPercentiles, timeStam
           },
       },
      tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
         callbacks: {
           label: function(context) {
             let label = context.dataset.label || '';
@@ -825,7 +908,7 @@ function processActiveFileSizePercentiles(activeFileTrackerPercentiles, timeStam
 }
 
 
-function processActiveMigrations(activeFileTrackerPercentiles) {
+const processActiveMigrations = function(activeFileTrackerPercentiles) {
   // Convert ids to names
   migrationNames = [] 
   for (let i in activeFileTrackerPercentiles.fileTrackerMigrationMapKeys) {
@@ -846,9 +929,10 @@ function processActiveMigrations(activeFileTrackerPercentiles) {
   type: 'bar',
   data: data,
   options: {
+      maintainAspectRatio: false,
+      responsive: true,
     indexAxis: 'y',
-    responsive: true,
-    onHover: (event, chartElement) => {
+        onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
     },
     scales : {
@@ -868,6 +952,13 @@ function processActiveMigrations(activeFileTrackerPercentiles) {
           },
       },
       tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
         callbacks: {
            title: function(context) {
               return context[0].label
@@ -884,20 +975,20 @@ function processActiveMigrations(activeFileTrackerPercentiles) {
 }
 
 
-function updateTableDate(newDate) {
+const updateTableDate = function(newDate) {
      document.getElementById("table-title-header").innerHTML = 
         newDate;
 }
 
-function onSliderUpdate() {
+const onSliderUpdate = function() {
 }
 
 document.getElementById("ThroughPutChart").onclick = function(evt) {
-  var activePoint = throughPutChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+  let activePoint = throughPutChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     diagnosticsTimeSeries.middle = 
            diagnosticsTimeSeries.dates[
                  diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
@@ -913,17 +1004,17 @@ document.getElementById("ThroughPutChart").onclick = function(evt) {
   }
 };
 
-function onSliderChange() {
+const onSliderChange = function() {
     updateThroughPutChart();
     getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
     reWriteLinks();
 }
 
-function getConnectionTotals(connectionTotals) {
+const getConnectionTotals = function(connectionTotals) {
   let totalRxQueue = 0;
   let totalTxQueue = 0;
   let retrnsmt = 0;
-  for (var connectionTotal in connectionTotals) {
+  for (let connectionTotal in connectionTotals) {
     totalRxQueue = totalRxQueue + connectionTotals[connectionTotal].totalRxQueue;
     totalTxQueue = totalTxQueue + connectionTotals[connectionTotal].totalTxQueue;
     retrnsmt = retrnsmt + connectionTotals[connectionTotal].retrnsmt;
@@ -931,7 +1022,7 @@ function getConnectionTotals(connectionTotals) {
   return {totalRxQueue, totalTxQueue, retrnsmt}
 }
 
-function getConnectionDetails(diagnostic) {
+const getConnectionDetails = function(diagnostic) {
   let totals = getConnectionTotals(diagnostic.connectionTotals);
   document.getElementById("diagnostic-summary-table-connections").innerHTML = diagnostic.connections.length;
 
@@ -952,7 +1043,7 @@ function getConnectionDetails(diagnostic) {
   }
 }
 
-function getThroughPut(diagnostic) {
+const getThroughPut = function(diagnostic) {
   let bytesPerSecond = Math.round(diagnostic.bytesMigrated/diagnostic.period);	
   document.getElementById("diagnostic-summary-table-bytes-per-second").innerHTML = 
              humanFileSize(bytesPerSecond,true) + ' / ' + humanFileSize(diagnostic.peakBytesMigrated, true);
@@ -964,7 +1055,7 @@ function getThroughPut(diagnostic) {
             Math.round(diagnostic.filesMigrated/diagnostic.period) + ' / ' + diagnostic.peakFilesMigrated;
 }
 
-function getCPULoad(diagnostic) {
+const getCPULoad = function(diagnostic) {
   if (diagnostic.systemCpuLoad > 0.9) {
     document.getElementById("diagnostic-summary-system-cpu").innerHTML =
          "<span style=\"font-weight: bold;color:red\">" + diagnostic.systemCpuLoad.toFixed(3) + "</span>";
@@ -986,7 +1077,7 @@ function getCPULoad(diagnostic) {
   }
 }
 
-function getIOLoad(diagnostic) {
+const getIOLoad = function(diagnostic) {
   let value = '-';
   if (diagnostic.hasOwnProperty('iowaitPercentage')) {
      value = diagnostic.iowaitPercentage;
@@ -1006,7 +1097,7 @@ function getIOLoad(diagnostic) {
   }
 }
 
-function getMigrationDiagnostic(diagnostic, timeStamp) {
+const getMigrationDiagnostic = function(diagnostic, timeStamp) {
   let pendingRegionsDelta = diagnosticDeltas[timeStamp].deltaPendingRegions;
   let failedPathsDelta = diagnosticDeltas[timeStamp].deltaFailedPaths;
   let retriesDelta = diagnosticDeltas[timeStamp].deltaRetries;
@@ -1070,7 +1161,7 @@ function getMigrationDiagnostic(diagnostic, timeStamp) {
 }
 
 
-function getInotifyDiagnostic(diagnostic) {
+const getInotifyDiagnostic = function(diagnostic) {
   document.getElementById("event-stream-total-events-read").innerHTML = 
         diagnostic.totalEventsRead.toLocaleString("en-US");
 
@@ -1097,7 +1188,7 @@ function getInotifyDiagnostic(diagnostic) {
 }
 
 
-function getEventManagerDiagnostic(diagnostic, timeStamp) {
+const getEventManagerDiagnostic = function(diagnostic, timeStamp) {
   let eventsDeltaQueued = diagnosticDeltas[timeStamp].deltaEventsQueued;
   let eventsDeltaQueuedString = eventsDeltaQueued.toLocaleString("en-US");
   if (eventsDeltaQueued > 0) {
@@ -1131,12 +1222,12 @@ function getEventManagerDiagnostic(diagnostic, timeStamp) {
   }
 }
 
-function getFileTracker(diagnostic) {
+const getFileTracker = function(diagnostic) {
   document.getElementById("diagnostic-summary-active-transfers").innerHTML = 
          diagnostic.fileTrackers.length;
   let totalFileTransferSize = 0;
   let totalBytesTransferred = 0;
-  for (var i = 0; i <  diagnostic.fileTrackers.length; i++) {
+  for (let i = 0; i <  diagnostic.fileTrackers.length; i++) {
     totalFileTransferSize = totalFileTransferSize + diagnostic.fileTrackers[i].FileLength;
     totalBytesTransferred = totalBytesTransferred + diagnostic.fileTrackers[i].BytesTransferred;
   }
@@ -1158,7 +1249,7 @@ function getFileTracker(diagnostic) {
   }
 }
 
-function getJvmGcDiagnostic(diagnostic, timeStamp) {
+const getJvmGcDiagnostic = function(diagnostic, timeStamp) {
   document.getElementById("diagnostic-summary-gc-avg-time").innerHTML = 
           (Math.floor(diagnostic.gcPauseTime/diagnostic.gcCount)).toLocaleString("en-US");
 
@@ -1180,7 +1271,7 @@ function getJvmGcDiagnostic(diagnostic, timeStamp) {
   }
 }
 
-function processDiagnostic(json) {
+const processDiagnostic = function(json) {
  let actionTotal = 0;
  for (let j in json.diagnosticSet.diagnostics) {
    let diagnostic = json.diagnosticSet.diagnostics[j]
@@ -1243,7 +1334,7 @@ function processDiagnostic(json) {
  }
 }
 
-function clickJump(x) {
+const clickJump = function(x) {
    if (x.id === 'network-throughput-row' || x.id === "file-throughput-row") {
        window.location.href = getThroughputLink();
    }
@@ -1265,8 +1356,8 @@ function clickJump(x) {
 }
 
 
-var previousIndex = -1;
-async function getDiagnostic(index) {
+let previousIndex = -1;
+const getDiagnostic = async function(index) {
   try {
     if (previousIndex === index) {
        return;
@@ -1302,19 +1393,19 @@ async function getDiagnostic(index) {
 
 
 
-function getGCForTime(timeStamp) {
+const getGCForTime = function(timeStamp) {
    if (timeStamp in jvmGCTimeMap) {
       return jvmGCTimeMap[timeStamp];
    }
    return "-";
 }
 
-async function getJvmGCTime() {
+const getJvmGCTime = async function() {
   try {
     let json = await loadReport('jvmGC.gz');
     let gcTimeForPeriod = json.gcTimeForPeriod;
     let gcTimes = json.timeStamp;    
-    for (var i = 0; i < gcTimes.length; i++) { 
+    for (let i = 0; i < gcTimes.length; i++) { 
        jvmGCTimeMap[gcTimes[i]] = gcTimeForPeriod[i];
     }
   } catch (error) {
@@ -1323,7 +1414,7 @@ async function getJvmGCTime() {
 }
 
 
-async function getThroughputChart() {
+const getThroughputChart = async function() {
   try {
     let json = await loadReport('throughput.gz');
     generateDiagnosticTimeSeries(json.timeStamp);

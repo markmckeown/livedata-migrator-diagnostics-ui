@@ -25,7 +25,7 @@
 
 <body>
 <!-- Navbar -->
-<div class="topnav">
+<nav class="topnav">
     <a id="index-link", href="index.html">Summary</a>
     <a id="throughput-link", href="throughput.html">Throughput</a>
     <a id="system-link" href="system.html">System</a>
@@ -34,13 +34,13 @@
     <a id="eventstream-link" href="eventstream.html">Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
     <a style="float: right; padding: 9px 9px;" id="share-link" href="#"><img src="share-fill.png" /></a>
-</div>
+</nav>
 
-<div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
+<main class="content">
     <div id='chart-container'>
        <canvas id="FileTransferChart" height="400px"></canvas>
     </div>
-    <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="transfer-slider"></div>
+    <div class="slider-container" id="transfer-slider"></div>
     <div>
        <table id="transfer-table"></table>
     </div>
@@ -48,20 +48,20 @@
 
 <script>
 // Datasets
-var dates;
-var mibPerS;
-var transferRate;
-var filePath;
-var baseQuery;
+let dates;
+let mibPerS;
+let transferRate;
+let filePath;
+let baseQuery;
 
 //Charts
-var fileTransferChart;
+let fileTransferChart;
 
 // Slider
-var slider = document.getElementById('transfer-slider');
+let slider = document.getElementById('transfer-slider');
 
-function renderTransferSlider(begin, end) {
-   var format = {
+const renderTransferSlider = function(begin, end) {
+   let format = {
       to: function(value) {
         let result =  dates[Math.round(value)];
         return result;
@@ -104,7 +104,7 @@ function renderTransferSlider(begin, end) {
         redrawChart(dates.indexOf(newStart), dates.indexOf(newEnd));
     });
 
-    var connect = slider.querySelectorAll('.noUi-connect');
+    let connect = slider.querySelectorAll('.noUi-connect');
     connect[0].classList.add('c-1-color');
     mergeTooltips(slider, 40, ' - ');
     return;
@@ -112,7 +112,7 @@ function renderTransferSlider(begin, end) {
 
 
 
-async function getDiagnostic(index, path) {
+const getDiagnostic = async function(index, path) {
   try {
     let json = await loadDiagnostic(index);
     let {fileTracker, diagnosticTimeStamp}  = processDiagnostic(json, path);
@@ -126,7 +126,7 @@ async function getDiagnostic(index, path) {
 }
 
 
-function getMigrationName(fileTracker, diagnostics) {
+const getMigrationName = function(fileTracker, diagnostics) {
   let migrationId = fileTracker.MigrationId;
   let migrationName;	
   for (let i in diagnostics) {
@@ -141,7 +141,7 @@ function getMigrationName(fileTracker, diagnostics) {
 }
 
 
-function processTransferTable(fileTracker, diagnosticTimeStamp, migrationName) {
+const processTransferTable = function(fileTracker, diagnosticTimeStamp, migrationName) {
   let percentageDone = Math.floor((fileTracker.BytesTransferred * 100)/fileTracker.FileLength);
   let endTime;
   // Reset LastUpdate if it is zero, no writes yet.
@@ -226,7 +226,7 @@ function processTransferTable(fileTracker, diagnosticTimeStamp, migrationName) {
 }
 
 
-function processDiagnostic(json, path){
+const processDiagnostic = function(json, path){
   let diagnostic;	
   let diagnosticTimeStamp;	
   for (let j in json.diagnosticSet.diagnostics) {
@@ -247,7 +247,7 @@ function processDiagnostic(json, path){
   return {fileTracker, diagnosticTimeStamp};
 }
 
-function processDiagnosticForFileTransfer(fileTracker, diagnosticTimeStamp) {
+const processDiagnosticForFileTransfer = function(fileTracker, diagnosticTimeStamp) {
   if (fileTracker.IsComplete) {
     // Complete transfers cannot be plotted
     document.getElementById("transfer-slider").style.display = "none";	  
@@ -306,7 +306,7 @@ function processDiagnosticForFileTransfer(fileTracker, diagnosticTimeStamp) {
 
 
 
-function redrawChart(startIndex, endIndex) {
+const redrawChart = function(startIndex, endIndex) {
   // TODO - need startIndex and endIndex
   
   fileTransferChart.data.labels = dates.slice(startIndex, endIndex);
@@ -316,7 +316,7 @@ function redrawChart(startIndex, endIndex) {
 }
 
 
-function plotFileTransferGraph(fileTracker, seconds, bytesForSecond, startIndex, endIndex) {
+const plotFileTransferGraph = function(fileTracker, seconds, bytesForSecond, startIndex, endIndex) {
   mibPerS = bytesForSecond.map(toMBSecond);
   transferRate = bytesForSecond;	
   let percentageDone = Math.floor((fileTracker.BytesTransferred * 100)/fileTracker.FileLength);
@@ -328,7 +328,9 @@ function plotFileTransferGraph(fileTracker, seconds, bytesForSecond, startIndex,
       datasets: [{
         label: "Bytes Per Second",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: transferRate.slice(startIndex, endIndex),
@@ -337,7 +339,9 @@ function plotFileTransferGraph(fileTracker, seconds, bytesForSecond, startIndex,
       {
         label: "Mbit/s",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: mibPerS.slice(startIndex, endIndex),
@@ -345,9 +349,18 @@ function plotFileTransferGraph(fileTracker, seconds, bytesForSecond, startIndex,
       }]
     },
     options: {
-      responsive: true,
       maintainAspectRatio: false,
-      plugins: {
+      responsive: true,
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
         title: {
           display: true,
           text: [[fileTracker.Path], '  (' + percentageDone + '% transferred, size: ' + humanFileSize(fileTracker.FileLength, true) +')'],
@@ -355,6 +368,7 @@ function plotFileTransferGraph(fileTracker, seconds, bytesForSecond, startIndex,
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -366,6 +380,7 @@ function plotFileTransferGraph(fileTracker, seconds, bytesForSecond, startIndex,
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0,
@@ -375,13 +390,12 @@ function plotFileTransferGraph(fileTracker, seconds, bytesForSecond, startIndex,
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0.0,
           position: 'right', 
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           title: {
             display: true,
             text: 'Mbit/s'
@@ -392,7 +406,7 @@ function plotFileTransferGraph(fileTracker, seconds, bytesForSecond, startIndex,
   });
 }
 
-function localReWriteLinks() {
+const localReWriteLinks = function() {
   let [startTimestamp, middleTimestamp, endTimestamp] = getPageDateRange();
   baseQuery = "?start=" + startTimestamp + "&middle=" + middleTimestamp + "&end=" + endTimestamp;
 
@@ -411,7 +425,7 @@ function localReWriteLinks() {
   return middleTimestamp;
 }
 
-function localGetMigrationLink(migrationName) {
+const localGetMigrationLink = function(migrationName) {
   return "migration.html" + baseQuery + "&migration=" + encodeURIComponent(migrationName);
 }
 
@@ -421,7 +435,7 @@ filePath = urlParams.get('path');
 pageIndex = localReWriteLinks();
 getDiagnostic(pageIndex, filePath);
 
-var button = document.getElementById("share-link");
+let button = document.getElementById("share-link");
 button.addEventListener("click",function(e){
     shareLink(window.location.href);
     button.disabled = "true";

@@ -15,47 +15,47 @@
 
 <body>
 <!-- Navbar -->
-<div class="topnav">
+<nav class="topnav">
     <a id="index-link", href="index.html">Summary</a>
     <a id="throughput-link", href="throughput.html">Throughput</a>
     <a id="system-link" href="system.html">System</a>
     <a id="network-link" href="network.html">Network</a>
     <a id="migrations-link" href="migrations.html">Migrations</a>
     <a id="eventstream-link" href="eventstream.html">Event Stream</a>
-    <a id="filetrackers-link" class="nav_active" href="filetrackers.html"  style="background-color: #FED8B1;">Transfers</a>
+    <a id="filetrackers-link" class="nav_active" href="filetrackers.html"  >Transfers</a>
     <a style="float: right; padding: 9px 9px;" id="share-link" href="javascript:copyLink(getFileTrackerLink());"><img src="share-fill.png" /></a>
-</div>
+</nav>
 
-<div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
+<main class="content">
       <div>
          <canvas id="FileTrackerChart" height="400px"></canvas>
       </div>
-      <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
-      <div style="text-align:center">
+      <div class="slider-container" id="slider"></div>
+      <div class="text-center">
          <h3><span id="transfer-count"></span></h3>
       </div>
-      <div style="text-align:center">
+      <div class="text-center">
          <h5>File Size Deciles: <span id="fileSize-percentiles"></span></h5>
          <h5>File Rate Deciles: <span id="fileRate-percentiles"></span></h5>
       </div>
-      <div style="overflow-x:auto;">
+      <div class="table-container">
         <table id="fileTracker-table"></table>
       </div>
 </div>
 
 <script>
 // Datasets
-var filetrackerCount;
-var throughout;
+let filetrackerCount;
+let throughout;
 
 //Charts
-var fileTrackerChart;
+let fileTrackerChart;
 
 // Sliders
-var slider = document.getElementById('slider');
+let slider = document.getElementById('slider');
 
 
-function doFileTrackerChart(filetrackers, startIndex, middleIndex, endIndex) {
+const doFileTrackerChart = function(filetrackers, startIndex, middleIndex, endIndex) {
   filetrackerCount = filetrackers.filetrackerCount;
   throughput = filetrackers.bytesPerSecond.map(toMBSecond)  	
 
@@ -66,7 +66,9 @@ function doFileTrackerChart(filetrackers, startIndex, middleIndex, endIndex) {
       datasets: [{
         label: "Active File Transfers",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: filetrackerCount.slice(startIndex, endIndex),
@@ -75,7 +77,9 @@ function doFileTrackerChart(filetrackers, startIndex, middleIndex, endIndex) {
       {
         label: "Mbit/s",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: throughput.slice(startIndex, endIndex),
@@ -83,12 +87,21 @@ function doFileTrackerChart(filetrackers, startIndex, middleIndex, endIndex) {
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
         annotation: {
           annotations: {
             line1: {
@@ -108,6 +121,7 @@ function doFileTrackerChart(filetrackers, startIndex, middleIndex, endIndex) {
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -122,6 +136,7 @@ function doFileTrackerChart(filetrackers, startIndex, middleIndex, endIndex) {
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0.0,
@@ -131,13 +146,12 @@ function doFileTrackerChart(filetrackers, startIndex, middleIndex, endIndex) {
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           min: 0.0,
           position: 'right', 
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           title: {
             display: true,
             text: 'Mbit/s'
@@ -148,7 +162,7 @@ function doFileTrackerChart(filetrackers, startIndex, middleIndex, endIndex) {
   });
 }
 
-function onChartClick(clickedElementindex) {
+const onChartClick = function(clickedElementindex) {
    diagnosticsTimeSeries.middle =
        diagnosticsTimeSeries.dates[
          diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
@@ -160,11 +174,11 @@ function onChartClick(clickedElementindex) {
 }
 
 document.getElementById("FileTrackerChart").onclick = function(evt) {
-  var activePoint = fileTrackerChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = fileTrackerChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex)
   }
 };
@@ -172,7 +186,7 @@ document.getElementById("FileTrackerChart").onclick = function(evt) {
 
 
 
-function processFileTrackerTable(diagnostic, index) {
+const processFileTrackerTable = function(diagnostic, index) {
   document.getElementById("transfer-count").innerHTML  = diagnostic.fileTrackers.length + " Active File Transfers at " + 
            new Date(diagnostic.timeStamp).toISOString().slice(0,-5);
   document.getElementById("fileTracker-table").innerHTML = "";
@@ -222,23 +236,23 @@ function processFileTrackerTable(diagnostic, index) {
       = getFileRateDecilesSummary(fileRate);
 
   document.getElementById("fileTracker-table").innerHTML = text;
-  var newTableObject = document.getElementById("fileTracker-table");
+  let newTableObject = document.getElementById("fileTracker-table");
   makeSortable("fil", sorttable, newTableObject);
 }
 
-function getFileDeciles(fileSizes) {
+const getFileDeciles = function(fileSizes) {
   let range = [];
-  for (var i=10; i <= 100; i += 10){
+  for (let i=10; i <= 100; i += 10){
     range.push(i);
   }
   return percentile(range, fileSizes);
 }
 
-function getFileSizeDecilesSummary(fileSizes) {
-  var fileSizeDeciles = getFileDeciles(fileSizes);
+const getFileSizeDecilesSummary = function(fileSizes) {
+  let fileSizeDeciles = getFileDeciles(fileSizes);
 
-  var i = 0;
-  var rows = [];
+  let i = 0;
+  let rows = [];
   while (i < fileSizeDeciles.length) {
      rows.push(humanFileSize(fileSizeDeciles[i]));
      i++;
@@ -246,11 +260,11 @@ function getFileSizeDecilesSummary(fileSizes) {
   return rows.join(", ");
 }
 
-function getFileRateDecilesSummary(fileRate) {
-  var fileRateDeciles = getFileDeciles(fileRate);
+const getFileRateDecilesSummary = function(fileRate) {
+  let fileRateDeciles = getFileDeciles(fileRate);
 
-  var i = 0;
-  var rows = [];
+  let i = 0;
+  let rows = [];
   while (i < fileRateDeciles.length) {
      rows.push(toMBSecond(fileRateDeciles[i]) + " Mbs");
      i++;
@@ -258,7 +272,7 @@ function getFileRateDecilesSummary(fileRate) {
   return rows.join(", ");
 }
 
-function processDiagnostic(json, index) {
+const processDiagnostic = function(json, index) {
   for (let j in json.diagnosticSet.diagnostics) {
     let diagnostic = json.diagnosticSet.diagnostics[j];
     if (diagnostic.type === 'FileTrackerDiagnosticDTO') {
@@ -269,7 +283,7 @@ function processDiagnostic(json, index) {
 }
 
 
-function resetAnnotations() {
+const resetAnnotations = function() {
   fileTrackerChart.options.plugins.annotation.annotations.line1.xMin =
            diagnosticsTimeSeries.middle;
   fileTrackerChart.options.plugins.annotation.annotations.line1.xMax =
@@ -278,7 +292,7 @@ function resetAnnotations() {
 }
 
 
-function redrawChart() {
+const redrawChart = function() {
   let startIndex =  diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start);
   let endIndex = diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.end)
   
@@ -293,16 +307,16 @@ function redrawChart() {
 }
 
 
-function onSliderUpdate() {
+const onSliderUpdate = function() {
 }
 
-function onSliderChange() {
+const onSliderChange = function() {
    getDiagnostic(diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]]);
    redrawChart(); 
    reWriteLinks();
 }
 
-async function getDiagnostic(index) {
+const getDiagnostic = async function(index) {
   try {
     let json = await loadDiagnostic(index);
     diagnostics = json;
@@ -313,7 +327,7 @@ async function getDiagnostic(index) {
   }
 }
 
-async function getFileTrackers() {
+const getFileTrackers = async function() {
   try {
     let json = await loadReport('filetrackers.gz');
     generateDiagnosticTimeSeries(json.timeStamp);

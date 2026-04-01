@@ -15,7 +15,7 @@
 
 <body>
 <!-- Navbar -->
-<div class="topnav">
+<nav class="topnav">
  <a id="index-link", href="index.html">Summary</a>
  <a id="throughput-link", href="throughput.html">Throughput</a>
  <a id="system-link" href="system.html">System</a>
@@ -24,74 +24,74 @@
  <a id="eventstream-link" href="eventstream.html">Event Stream</a>
  <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
  <a style="float: right; padding: 9px 9px;" id="share-link" href="#"><img src="share-fill.png" /></a>
-</div>
+</nav>
 
-<div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
+<main class="content">
            <div>
               <h3 id="migration-title"></h3>
            </div>
-           <div class="charts-wrapper">
+           <div class="charts-wrapper two-column-charts">
               <div>
-                 <canvas id="ActionsChart"></canvas>
+                 <canvas id="ActionsChart" height="400"></canvas>
               </div>
               <div>
-                 <canvas id="PendingRegionsChart"></canvas>
+                 <canvas id="PendingRegionsChart" height="400"></canvas>
               </div>
               <div>
-                <canvas id="ActiveTransfersChart"></canvas>
+                <canvas id="ActiveTransfersChart" height="400"></canvas>
               </div>
               <div>
-                 <canvas id="PathRetryChart"></canvas>
+                 <canvas id="PathRetryChart" height="400"></canvas>
               </div>
               <div>
-                 <canvas id="PathsRequeuedChart"></canvas>
+                 <canvas id="PathsRequeuedChart" height="400"></canvas>
               </div>
               <div>
-                 <canvas id="FailedPathChart"></canvas>
+                 <canvas id="FailedPathChart" height="400"></canvas>
               </div>
               <div>
-               <canvas id="BytesScannedChart"></canvas>
+               <canvas id="BytesScannedChart" height="400"></canvas>
               </div>
               <div>
-                <canvas id="FilesScannedChart"></canvas>
+                <canvas id="FilesScannedChart" height="400"></canvas>
              </div>
            </div>
-           <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
+           <div class="slider-container" id="slider"></div>
            <div>
-               <h3 style="text-align: center;"><span id="transfer-count"></span></h3>
+               <h3 class="text-center"><span id="transfer-count"></span></h3>
            </div>
-           <div style="overflow-x:auto;">
+           <div class="table-container">
              <table id="fileTracker-table" style="width:98%; margin-left:auto; margin-right: auto;"></table>
            </div>
 </div>
 
 <script>
 //Datasets
-var actions;
-var pendingRegions;
-var pathRetryCount;
-var pathsRequeued;
-var failedPaths;
-var bytesScanned;
-var filesScanned;
-var activeTransfers;
-var migrationId;
-var diagnostics;
+let actions;
+let pendingRegions;
+let pathRetryCount;
+let pathsRequeued;
+let failedPaths;
+let bytesScanned;
+let filesScanned;
+let activeTransfers;
+let migrationId;
+let diagnostics;
 
 //Charts
-var activeTransfersChart;
-var actionChart;
-var pendingRegionsChart;
-var pathRetryChart;
-var pathsRequeueChart;
-var failedPathChart;
-var bytesScannedChart;
-var filesScannedChart;
+let activeTransfersChart;
+let actionChart;
+let pendingRegionsChart;
+let pathRetryChart;
+let pathsRequeueChart;
+let failedPathChart;
+let bytesScannedChart;
+let filesScannedChart;
 
 //Sliders
-var slider = document.getElementById('slider');
+let slider = document.getElementById('slider');
 
-function doActionChart(migration_time_series, startIndex, middleIndex, endIndex) {
+const doActionChart = function(migration_time_series, startIndex, middleIndex, endIndex) {
   actions = migration_time_series.migration.map(a => a.totalUnExecutedEvents);
   actionChart = new Chart("ActionsChart", {
     type: "line",
@@ -100,7 +100,9 @@ function doActionChart(migration_time_series, startIndex, middleIndex, endIndex)
       datasets: [{
         label: "Actions",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255, 165, 0)',
         data: actions.slice(startIndex, endIndex),
@@ -108,11 +110,21 @@ function doActionChart(migration_time_series, startIndex, middleIndex, endIndex)
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
         annotation: {
           annotations: {
             line1: {
@@ -132,6 +144,7 @@ function doActionChart(migration_time_series, startIndex, middleIndex, endIndex)
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -146,6 +159,7 @@ function doActionChart(migration_time_series, startIndex, middleIndex, endIndex)
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -159,7 +173,7 @@ function doActionChart(migration_time_series, startIndex, middleIndex, endIndex)
   });
 }
 
-function doPendingRegionsChart(migration_time_series, startIndex, middleIndex, endIndex) {
+const doPendingRegionsChart = function(migration_time_series, startIndex, middleIndex, endIndex) {
   pendingRegions = migration_time_series.migration.map(a => a.pendingRegions);
   pendingRegionsChart = new Chart("PendingRegionsChart", {
     type: "line",
@@ -168,7 +182,9 @@ function doPendingRegionsChart(migration_time_series, startIndex, middleIndex, e
       datasets: [{
         label: "Pending Regions",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255, 165, 0)',
         data: pendingRegions.slice(startIndex, endIndex),
@@ -176,11 +192,21 @@ function doPendingRegionsChart(migration_time_series, startIndex, middleIndex, e
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
         annotation: {
           annotations: {
             line1: {
@@ -200,6 +226,7 @@ function doPendingRegionsChart(migration_time_series, startIndex, middleIndex, e
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -214,6 +241,7 @@ function doPendingRegionsChart(migration_time_series, startIndex, middleIndex, e
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -228,7 +256,7 @@ function doPendingRegionsChart(migration_time_series, startIndex, middleIndex, e
 }
 
 
-function doPathRetryChart(migration_time_series, startIndex, middleIndex, endIndex) {
+const doPathRetryChart = function(migration_time_series, startIndex, middleIndex, endIndex) {
   pathRetryCount = migration_time_series.migration.map(a => a.pathRetryCount);
   pathRetryChart = new Chart("PathRetryChart", {
     type: "line",
@@ -237,7 +265,9 @@ function doPathRetryChart(migration_time_series, startIndex, middleIndex, endInd
       datasets: [{
         label: "Retries",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255, 165, 0)',
         data: pathRetryCount.slice(startIndex, endIndex),
@@ -245,11 +275,21 @@ function doPathRetryChart(migration_time_series, startIndex, middleIndex, endInd
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
         annotation: {
           annotations: {
             line1: {
@@ -269,6 +309,7 @@ function doPathRetryChart(migration_time_series, startIndex, middleIndex, endInd
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -283,6 +324,7 @@ function doPathRetryChart(migration_time_series, startIndex, middleIndex, endInd
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -297,7 +339,7 @@ function doPathRetryChart(migration_time_series, startIndex, middleIndex, endInd
 }
 
 
-function doPathsRequeuedChart(migration_time_series, startIndex, middleIndex, endIndex) {
+const doPathsRequeuedChart = function(migration_time_series, startIndex, middleIndex, endIndex) {
     
   pathsRequeued = migration_time_series.migration.map(a => a.migrationPathsRequeued);
   pathsRequeueChart = new Chart("PathsRequeuedChart", {
@@ -307,7 +349,9 @@ function doPathsRequeuedChart(migration_time_series, startIndex, middleIndex, en
       datasets: [{
         label: "Paths Requeued",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255, 165, 0)',
         data: pathsRequeued.slice(startIndex, endIndex),
@@ -315,11 +359,21 @@ function doPathsRequeuedChart(migration_time_series, startIndex, middleIndex, en
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
         annotation: {
           annotations: {
             line1: {
@@ -339,6 +393,7 @@ function doPathsRequeuedChart(migration_time_series, startIndex, middleIndex, en
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -353,6 +408,7 @@ function doPathsRequeuedChart(migration_time_series, startIndex, middleIndex, en
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -366,7 +422,7 @@ function doPathsRequeuedChart(migration_time_series, startIndex, middleIndex, en
   });
 }
 
-function doFailedPathChart(migration_time_series, startIndex, middleIndex, endIndex) {
+const doFailedPathChart = function(migration_time_series, startIndex, middleIndex, endIndex) {
     
   failedPaths = migration_time_series.migration.map(a => a.failedPaths);
   failedPathChart = new Chart("FailedPathChart", {
@@ -376,7 +432,9 @@ function doFailedPathChart(migration_time_series, startIndex, middleIndex, endIn
       datasets: [{
         label: "Failed Paths",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255, 165, 0)',
         data: failedPaths.slice(startIndex, endIndex),
@@ -384,11 +442,21 @@ function doFailedPathChart(migration_time_series, startIndex, middleIndex, endIn
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
         annotation: {
           annotations: {
             line1: {
@@ -408,6 +476,7 @@ function doFailedPathChart(migration_time_series, startIndex, middleIndex, endIn
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -422,6 +491,7 @@ function doFailedPathChart(migration_time_series, startIndex, middleIndex, endIn
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -435,7 +505,7 @@ function doFailedPathChart(migration_time_series, startIndex, middleIndex, endIn
   });
 }
 
-function doBytesScannedChart(migration_time_series, startIndex, middleIndex, endIndex) {
+const doBytesScannedChart = function(migration_time_series, startIndex, middleIndex, endIndex) {
     
   bytesScanned = migration_time_series.migration.map(a => a.bytesScanned);
   bytesScannedChart = new Chart("BytesScannedChart", {
@@ -445,7 +515,9 @@ function doBytesScannedChart(migration_time_series, startIndex, middleIndex, end
       datasets: [{
         label: "Bytes Transferred due to Root Scan",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255, 165, 0)',
         data: bytesScanned.slice(startIndex, endIndex),
@@ -453,11 +525,12 @@ function doBytesScannedChart(migration_time_series, startIndex, middleIndex, end
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      plugins: {
+                  plugins: {
         annotation: {
           annotations: {
             line1: {
@@ -475,6 +548,13 @@ function doBytesScannedChart(migration_time_series, startIndex, middleIndex, end
           text: "Bytes Transferred"
         },
        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
         callbacks: {
           label: function(context) {
             let label = context.dataset.label || '';
@@ -489,6 +569,7 @@ function doBytesScannedChart(migration_time_series, startIndex, middleIndex, end
      },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -503,6 +584,7 @@ function doBytesScannedChart(migration_time_series, startIndex, middleIndex, end
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -517,7 +599,7 @@ function doBytesScannedChart(migration_time_series, startIndex, middleIndex, end
 }
 
 
-function doFilesScannedChart(migration_time_series, startIndex, middleIndex, endIndex) {
+const doFilesScannedChart = function(migration_time_series, startIndex, middleIndex, endIndex) {
     
   filesScanned = migration_time_series.migration.map(a => a.filesScanned);
   filesScannedChart = new Chart("FilesScannedChart", {
@@ -527,7 +609,9 @@ function doFilesScannedChart(migration_time_series, startIndex, middleIndex, end
       datasets: [{
         label: "Files Scanned",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255, 165, 0)',
         data: filesScanned.slice(startIndex, endIndex),
@@ -535,11 +619,21 @@ function doFilesScannedChart(migration_time_series, startIndex, middleIndex, end
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
         annotation: {
           annotations: {
             line1: {
@@ -559,6 +653,7 @@ function doFilesScannedChart(migration_time_series, startIndex, middleIndex, end
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -573,6 +668,7 @@ function doFilesScannedChart(migration_time_series, startIndex, middleIndex, end
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -587,7 +683,7 @@ function doFilesScannedChart(migration_time_series, startIndex, middleIndex, end
 }
 
 
-function doActiveTransfersChart(migration_time_series, startIndex, middleIndex, endIndex) {
+const doActiveTransfersChart = function(migration_time_series, startIndex, middleIndex, endIndex) {
     
   activeTransfers = migration_time_series.migration.map(a => a.activeTransfers);
   activeTransfersChart = new Chart("ActiveTransfersChart", {
@@ -597,7 +693,9 @@ function doActiveTransfersChart(migration_time_series, startIndex, middleIndex, 
       datasets: [{
         label: "Active Transfers.",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255, 165, 0)',
         data: activeTransfers.slice(startIndex, endIndex),
@@ -605,11 +703,21 @@ function doActiveTransfersChart(migration_time_series, startIndex, middleIndex, 
       }]
     },
     options: {
+      maintainAspectRatio: false,
+      responsive: true,
       onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
-      responsive: true,
-      plugins: {
+                  plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
         annotation: {
           annotations: {
             line1: {
@@ -629,6 +737,7 @@ function doActiveTransfersChart(migration_time_series, startIndex, middleIndex, 
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -643,6 +752,7 @@ function doActiveTransfersChart(migration_time_series, startIndex, middleIndex, 
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -656,7 +766,7 @@ function doActiveTransfersChart(migration_time_series, startIndex, middleIndex, 
   });
 }
 
-function processMigrationTimeSeries(migration_time_series, migration_id) {
+const processMigrationTimeSeries = function(migration_time_series, migration_id) {
    doActionChart(migration_time_series);
    doPendingRegionsChart(migration_time_series);
    doPathRetryChart(migration_time_series);
@@ -667,7 +777,7 @@ function processMigrationTimeSeries(migration_time_series, migration_id) {
    doActiveTransfersChart(migration_time_series);
 }
 
-function resetChartsAnnotation() {
+const resetChartsAnnotation = function() {
   const charts = [activeTransfersChart, actionChart, pendingRegionsChart, pathRetryChart, 
                 pathsRequeueChart, failedPathChart, bytesScannedChart, filesScannedChart];
   charts.forEach((chart) => {
@@ -678,7 +788,7 @@ function resetChartsAnnotation() {
 }
 
 
-function chartOnClick(clickedElementindex) {
+const chartOnClick = function(clickedElementindex) {
     diagnosticsTimeSeries.middle =
        diagnosticsTimeSeries.dates[
          diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
@@ -691,75 +801,75 @@ function chartOnClick(clickedElementindex) {
 
 
 document.getElementById("ActionsChart").onclick = function(evt) {
-  var activePoint = actionChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = actionChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     chartOnClick(clickedElementindex)
   }
 };
 
 document.getElementById("PendingRegionsChart").onclick = function(evt) {
-  var activePoint = pendingRegionsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = pendingRegionsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     chartOnClick(clickedElementindex)
   }
 };
 
 
 document.getElementById("PathRetryChart").onclick = function(evt) {
-  var activePoint = pathRetryChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = pathRetryChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     chartOnClick(clickedElementindex)
   }
 };
 
 
 document.getElementById("PathsRequeuedChart").onclick = function(evt) {
-  var activePoint = pathsRequeueChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = pathsRequeueChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     chartOnClick(clickedElementindex)
   }
 };
 
 document.getElementById("FailedPathChart").onclick = function(evt) {
-  var activePoint = failedPathChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = failedPathChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     chartOnClick(clickedElementindex)
   }
 };
 
 
 document.getElementById("BytesScannedChart").onclick = function(evt) {
-  var activePoint = bytesScannedChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = bytesScannedChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     chartOnClick(clickedElementindex)
   }
 };
 
 
 document.getElementById("FilesScannedChart").onclick = function(evt) {
-  var activePoint = filesScannedChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = filesScannedChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     chartOnClick(clickedElementindex)
   }
 };
 
 
 document.getElementById("ActiveTransfersChart").onclick = function(evt) {
-  var activePoint = activeTransfersChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
+  let activePoint = activeTransfersChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);;
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     chartOnClick(clickedElementindex)
   }
 };
 
-function redrawChart() {
+const redrawChart = function() {
   let startIndex =  diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start);
   let endIndex = diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.end);
 
@@ -796,7 +906,7 @@ function redrawChart() {
 
 
 
-function processFileTrackerTable(diagnostic, index, migration) {
+const processFileTrackerTable = function(diagnostic, index, migration) {
   let count = 0;
   document.getElementById("fileTracker-table").innerHTML = "";
   
@@ -846,7 +956,7 @@ function processFileTrackerTable(diagnostic, index, migration) {
 
   if (count > 0 ) { 
      document.getElementById("fileTracker-table").innerHTML = text;
-     var newTableObject = document.getElementById("fileTracker-table");
+     let newTableObject = document.getElementById("fileTracker-table");
      makeSortable("mig", sorttable, newTableObject);
   }
 
@@ -855,7 +965,7 @@ function processFileTrackerTable(diagnostic, index, migration) {
         + " (" + migrationId + ")";
 }
 
-function processDiagnostic(json, index, migration) {
+const processDiagnostic = function(json, index, migration) {
   for (let j in json.diagnosticSet.diagnostics) {
     let diagnostic = json.diagnosticSet.diagnostics[j];
     if (diagnostic.type === 'FileTrackerDiagnosticDTO') {
@@ -865,17 +975,17 @@ function processDiagnostic(json, index, migration) {
   }
 }
 
-function onSliderUpdate() {
+const onSliderUpdate = function() {
 }
 
-function onSliderChange() {
+const onSliderChange = function() {
    redrawChart();
    reWriteLinks();	  
    getDiagnostic(migrationId);
 }
 
 
-async function getMigrationTimeSeries(migration_id) {
+const getMigrationTimeSeries = async function(migration_id) {
     try {
        let res = await fetch('data/migrations/' + migration_id + '.gz')
        let json = await res.json();
@@ -893,8 +1003,8 @@ async function getMigrationTimeSeries(migration_id) {
     }
 }
 
-var old_index = -1;
-async function getDiagnostic(migration) {
+let old_index = -1;
+const getDiagnostic = async function(migration) {
   try {
     index = diagnosticsTimeSeries.timeStamps[diagnosticsTimeSeries.datesIndexMap[diagnosticsTimeSeries.middle]];
     if (old_index === index) {
@@ -915,7 +1025,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const migration_name = urlParams.get('migration');
 getMigrationTimeSeries(migration_name);
 
-var button = document.getElementById("share-link");
+let button = document.getElementById("share-link");
 button.addEventListener("click",function(e){
     copyLink(getMigrationLink(migration_name));
     button.disabled = "true";

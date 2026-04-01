@@ -14,19 +14,19 @@
 
 <body>
 <!-- Navbar -->
-<div class="topnav">
+<nav class="topnav">
     <a id="index-link", href="index.html">Summary</a>
     <a id="throughput-link", href="throughput.html">Throughput</a>
     <a id="system-link" href="system.html">System</a>
     <a id="network-link" href="network.html">Network</a>
     <a id="migrations-link" href="migrations.html">Migrations</a>
-    <a id="eventstream-link" class="nav_active" href="eventstream.html" style="background-color: #FED8B1;">Event Stream</a>
+    <a id="eventstream-link" class="nav_active" href="eventstream.html" >Event Stream</a>
     <a id="filetrackers-link" href="filetrackers.html">Transfers</a>
     <a style="float: right; padding: 9px 9px;" id="share-link" href="javascript:copyLink(getEventStreamLink());"><img src="share-fill.png" /></a>
-</div>
+</nav>
 
 <!-- !PAGE CONTENT! -->
-<div style="margin-left:30px;margin-top:10px;margin-bottom:10px;margin-right:30px">
+<main class="content">
         <div>
            <canvas id="EventRpcChart" height="400"></canvas>
         </div>
@@ -36,29 +36,29 @@
         <div>
            <canvas id="EventsBehindChart" height="400"></canvas>
         </div>
-   <div style="margin-left:180px;margin-top:50px;margin-bottom:50px;margin-right:180px" id="slider"></div>
+   <div class="slider-container" id="slider"></div>
 <!-- !PAGE CONTENT! -->
 </div>
 
 <script>
-var avgEventsReadPerCall;
-var maxEventsReadPerCall;
-var avgRpcCallTime;
-var maxRpcCallTime;
-var maxEventsBehind;
-var avgEventsBehind;
+let avgEventsReadPerCall;
+let maxEventsReadPerCall;
+let avgRpcCallTime;
+let maxRpcCallTime;
+let maxEventsBehind;
+let avgEventsBehind;
 
 // Sliders
-var slider = document.getElementById('slider');
+let slider = document.getElementById('slider');
 
 
 // Charts
-var eventRpcChart;
-var eventsPerRpcChart;
-var eventsBehindChart;
+let eventRpcChart;
+let eventsPerRpcChart;
+let eventsBehindChart;
 
 
-function doEventRpcChart(throughput, startIndex, middleIndex, endIndex) {
+const doEventRpcChart = function(throughput, startIndex, middleIndex, endIndex) {
    avgRpcCallTime  = throughput.avgRpcCallTime;
    maxRpcCallTime  = throughput.maxRpcCallTime;
 
@@ -69,7 +69,9 @@ function doEventRpcChart(throughput, startIndex, middleIndex, endIndex) {
       datasets: [{
         label: "Average Event RPC Time",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: avgRpcCallTime.slice(startIndex, endIndex),
@@ -78,7 +80,9 @@ function doEventRpcChart(throughput, startIndex, middleIndex, endIndex) {
       {
         label: "Maximum Event RPC Time",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: maxRpcCallTime.slice(startIndex, endIndex),
@@ -86,12 +90,21 @@ function doEventRpcChart(throughput, startIndex, middleIndex, endIndex) {
       }]
     },
     options: {
-      responsive: true,
       maintainAspectRatio: false,
-      onHover: (event, chartElement) => {
+      responsive: true,
+                  onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
       plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
        annotation: {
           annotations: {
             line1: {
@@ -112,6 +125,7 @@ function doEventRpcChart(throughput, startIndex, middleIndex, endIndex) {
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -126,6 +140,7 @@ function doEventRpcChart(throughput, startIndex, middleIndex, endIndex) {
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -136,13 +151,12 @@ function doEventRpcChart(throughput, startIndex, middleIndex, endIndex) {
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'right', 
           min: 0.0,
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           title: {
             display: true,
             text: 'Maximum RPC Time (ms).'
@@ -153,7 +167,7 @@ function doEventRpcChart(throughput, startIndex, middleIndex, endIndex) {
   });
 }
 
-function doEventsBehindChart(throughput, startIndex, middleIndex, endIndex) {
+const doEventsBehindChart = function(throughput, startIndex, middleIndex, endIndex) {
    maxEventsBehind = throughput.maxEventsBehind;
    avgEventsBehind = throughput.avgEventsBehind;
 
@@ -164,7 +178,9 @@ function doEventsBehindChart(throughput, startIndex, middleIndex, endIndex) {
       datasets: [{
         label: "Average Events Behind",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: avgEventsBehind.slice(startIndex, endIndex),
@@ -173,7 +189,9 @@ function doEventsBehindChart(throughput, startIndex, middleIndex, endIndex) {
       {
         label: "Maximum Events Behind",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: maxEventsBehind.slice(startIndex, endIndex),
@@ -181,12 +199,21 @@ function doEventsBehindChart(throughput, startIndex, middleIndex, endIndex) {
       }]
     },
     options: {
-      responsive: true,
       maintainAspectRatio: false,
-      onHover: (event, chartElement) => {
+      responsive: true,
+                  onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
       plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
        annotation: {
           annotations: {
             line1: {
@@ -207,6 +234,7 @@ function doEventsBehindChart(throughput, startIndex, middleIndex, endIndex) {
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -221,6 +249,7 @@ function doEventsBehindChart(throughput, startIndex, middleIndex, endIndex) {
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -231,13 +260,12 @@ function doEventsBehindChart(throughput, startIndex, middleIndex, endIndex) {
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'right', 
           min: 0.0,
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           title: {
             display: true,
             text: 'Maximum RPC Events Behind.'
@@ -248,7 +276,7 @@ function doEventsBehindChart(throughput, startIndex, middleIndex, endIndex) {
   });
 }
 
-function doEventsPerRpcChart(throughput, startIndex, middleIndex, endIndex) {
+const doEventsPerRpcChart = function(throughput, startIndex, middleIndex, endIndex) {
    avgEventsReadPerCall  = throughput.avgEventsReadPerCall;
    maxEventsReadPerCall  = throughput.maxEventsReadPerCall;
 
@@ -259,7 +287,9 @@ function doEventsPerRpcChart(throughput, startIndex, middleIndex, endIndex) {
       datasets: [{
         label: "Average Events per RPC",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor: transparentize(255, 165, 0, 0.5),
         borderColor: 'rgb(255,165,0)',
         data: avgEventsReadPerCall.slice(startIndex, endIndex),
@@ -268,7 +298,9 @@ function doEventsPerRpcChart(throughput, startIndex, middleIndex, endIndex) {
       {
         label: "Maximum Events Per RPC",
         fill: false,
-        lineTension: 0.4,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
         backgroundColor:  transparentize(54, 162, 235, 0.5),
         borderColor: 'rgb(54, 162, 235)',
         data: maxEventsReadPerCall.slice(startIndex, endIndex),
@@ -276,12 +308,21 @@ function doEventsPerRpcChart(throughput, startIndex, middleIndex, endIndex) {
       }]
     },
     options: {
-      responsive: true,
       maintainAspectRatio: false,
-      onHover: (event, chartElement) => {
+      responsive: true,
+                  onHover: (event, chartElement) => {
          event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
       },
       plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 1,
+        },
        annotation: {
           annotations: {
             line1: {
@@ -302,6 +343,7 @@ function doEventsPerRpcChart(throughput, startIndex, middleIndex, endIndex) {
       },
       scales: {
         x: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           title: {
             display: false,
@@ -316,6 +358,7 @@ function doEventsPerRpcChart(throughput, startIndex, middleIndex, endIndex) {
           }
         },
         y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'left', 
@@ -326,13 +369,12 @@ function doEventsPerRpcChart(throughput, startIndex, middleIndex, endIndex) {
           }
         },
         y1: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
           display: true,
           type: 'linear',
           position: 'right', 
           min: 0.0,
-          grid: {
-             drawOnChartArea: false, // only want the grid lines for one axis to show up
-          },
+          
           title: {
             display: true,
             text: 'Maximum Events Per RPC.'
@@ -346,7 +388,7 @@ function doEventsPerRpcChart(throughput, startIndex, middleIndex, endIndex) {
 
 
 
-function redrawChart() {
+const redrawChart = function() {
   if (typeof eventRpcChart  === 'undefined') {
     console.log("Skipping redrawing charts - eventRpcChart not drawn yet");
     return;
@@ -398,7 +440,7 @@ function redrawChart() {
 }
 
 
-function onChartClick(clickedElementindex) {
+const onChartClick = function(clickedElementindex) {
     diagnosticsTimeSeries.middle =
         diagnosticsTimeSeries.dates[
            diagnosticsTimeSeries.dates.indexOf(diagnosticsTimeSeries.start)
@@ -410,52 +452,52 @@ function onChartClick(clickedElementindex) {
 
 
 document.getElementById("EventsPerRpcChart").onclick = function(evt) {
-  var activePoint = eventsPerRpcChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+  let activePoint = eventsPerRpcChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex);
   }
 };
 
 document.getElementById("EventsBehindChart").onclick = function(evt) {
-  var activePoint = eventsBehindChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+  let activePoint = eventsBehindChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex);
   }
 };
 
 document.getElementById("EventRpcChart").onclick = function(evt) {
-  var activePoint = eventRpcChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+  let activePoint = eventRpcChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
 
   // make sure click was on an actual point
   if (activePoint.length > 0) {
-    var clickedElementindex = activePoint[0].index;
+    let clickedElementindex = activePoint[0].index;
     onChartClick(clickedElementindex);
   }
 };
 
 
-function setSliderMiddle() {
+const setSliderMiddle = function() {
    slider.noUiSlider.setHandle(1, diagnosticsTimeSeries.middle, false, false);
 }
 
 
-function onSliderUpdate() {
+const onSliderUpdate = function() {
 }
 
-function onSliderChange() {
+const onSliderChange = function() {
    console.log("onSliderChange");
    redrawChart();
    reWriteLinks();
 }
 
 
-async function getThroughput(index) {
+const getThroughput = async function(index) {
   try {
     let json = await loadReport('eventstream.gz');
     generateDiagnosticTimeSeries(json.timeStamp);
